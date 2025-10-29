@@ -1,0 +1,106 @@
+
+# Claude Flow generated files
+.claude/settings.local.json
+.mcp.json
+claude-flow.config.json
+.swarm/
+.hive-mind/
+.claude-flow/
+memory/
+coordination/
+memory/claude-flow-data.json
+memory/sessions/*
+!memory/sessions/README.md
+memory/agents/*
+!memory/agents/README.md
+coordination/memory_bank/*
+coordination/subtasks/*
+coordination/orchestration/*
+*.db
+*.db-journal
+*.db-wal
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+claude-flow
+# Removed Windows wrapper files per user request
+hive-mind-prompt-*.txt
+
+# Packer build artifacts
+*.box
+*.qcow2
+*.img
+.packer_cache/
+packer_cache/
+output-*/
+packer-manifest.json
+
+# Ansible artifacts
+*.retry
+.ansible/
+*.log
+
+# Vagrant
+.vagrant/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Sensitive files
+*.pem
+*.key
+*_rsa
+*_rsa.pub
+*.secret
+secrets/
+.env
+.env.local
+.env*.local
+
+# Node.js (if applicable)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.pnpm-debug.log*
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+*.sublime-workspace
+*.sublime-project
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+*.tmp
+*.bak
+*.backup
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.cache/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Claude Flow additional patterns
+*.db-shm
+.claude-flow-session-*
+session-*.json
+agent-*.json
+swarm-*.json
+neural-models/*.onnx
+neural-models/*.wasm
