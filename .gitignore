@@ -104,3 +104,7 @@ agent-*.json
 swarm-*.json
 neural-models/*.onnx
 neural-models/*.wasm
+
+.claude/
+docs/
+CLAUDE.md
