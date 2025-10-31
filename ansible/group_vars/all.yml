@@ -1,0 +1,22 @@
+---
+# Global Variables for All Hosts
+# These variables apply to all playbook runs regardless of inventory
+
+# SSH Public Keys for Team Access
+# Add team members' public SSH keys here to grant access to vaultadmin user
+# Format: "ssh-rsa AAAAB3... user@host" or "ssh-ed25519 AAAAC3... user@host"
+ssh_public_keys:
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN00H7QtF3c2guPOvinN4My1bPRGAgzLQ29J0pRq/Ii7 julianmcarlin@gmail.com"
+  # Add additional team member SSH keys below:
+  # - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ... alice@workstation"
+  # - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ... bob@desktop"
+
+# To add your SSH key:
+# 1. On your local machine, run: cat ~/.ssh/id_rsa.pub (or id_ed25519.pub)
+# 2. Copy the entire output starting with "ssh-rsa" or "ssh-ed25519"
+# 3. Add it to the list above in quotes
+# 4. Rebuild the image or re-run Ansible provisioning
+
+# Example:
+# ssh_public_keys:
+#   - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC3g... julian@MacBook-Pro.local"

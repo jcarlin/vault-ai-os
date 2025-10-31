@@ -1,0 +1,27 @@
+---
+# Master Playbook - Vault Cube Golden Image
+# Orchestrates all roles for base system configuration
+# Phase: Epic 1a - Demo Box Operation
+
+- name: Configure Vault Cube Base System
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: common
+      tags: ['common', 'base']
+
+    - role: users
+      tags: ['users', 'base']
+
+    - role: packages
+      tags: ['packages', 'base']
+
+    - role: networking
+      tags: ['networking', 'base']
+
+  post_tasks:
+    - name: Display completion message
+      debug:
+        msg: "Base system configuration complete!"

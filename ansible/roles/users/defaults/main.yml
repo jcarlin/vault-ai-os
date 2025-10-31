@@ -1,0 +1,5 @@
+---
+# Users Role - Default Variables
+
+vault_user: vaultadmin
+disable_root_login: false  # Will enable in Task 1a.5 (Security)

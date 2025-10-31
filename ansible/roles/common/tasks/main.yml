@@ -1,0 +1,61 @@
+---
+# Common Role - System-wide Configuration
+# Sets timezone, hostname, system updates
+
+- name: Set timezone to UTC
+  timezone:
+    name: UTC
+  notify: Restart cron
+
+- name: Set hostname
+  hostname:
+    name: "{{ system_hostname }}"
+
+- name: Update /etc/hosts with hostname
+  lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "127.0.1.1 {{ system_hostname }}"
+    state: present
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Upgrade all packages
+  apt:
+    upgrade: dist
+    autoclean: yes
+    autoremove: yes
+  when: perform_system_upgrade | bool
+
+- name: Install apt-transport-https
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - software-properties-common
+    state: present
+
+- name: Configure system locale
+  locale_gen:
+    name: "{{ system_locale }}"
+    state: present
+
+- name: Set default locale
+  lineinfile:
+    path: /etc/default/locale
+    regexp: '^LANG='
+    line: "LANG={{ system_locale }}"
+    create: yes
+
+- name: Ensure core services are enabled
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  loop:
+    - systemd-timesyncd
+    - cron
+  ignore_errors: true

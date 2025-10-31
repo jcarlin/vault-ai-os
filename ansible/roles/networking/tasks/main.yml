@@ -1,0 +1,62 @@
+---
+# Networking Role - Network Configuration
+
+- name: Configure DNS resolution
+  template:
+    src: resolv.conf.j2
+    dest: /etc/resolv.conf
+    mode: '0644'
+  when: configure_dns | bool
+
+- name: Ensure systemd-resolved is configured
+  lineinfile:
+    path: /etc/systemd/resolved.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  loop:
+    - { regexp: '^#?DNS=', line: 'DNS={{ dns_servers | join(" ") }}' }
+    - { regexp: '^#?FallbackDNS=', line: 'FallbackDNS={{ fallback_dns_servers | join(" ") }}' }
+  notify: Restart systemd-resolved
+  when: use_systemd_resolved | bool
+
+- name: Enable and start systemd-timesyncd
+  systemd:
+    name: systemd-timesyncd
+    enabled: yes
+    state: started
+
+- name: Configure NTP servers
+  lineinfile:
+    path: /etc/systemd/timesyncd.conf
+    regexp: '^#?NTP='
+    line: "NTP={{ ntp_servers | join(' ') }}"
+    state: present
+  notify: Restart systemd-timesyncd
+
+- name: Ensure network services are enabled
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  loop:
+    - systemd-networkd
+    - systemd-resolved
+  ignore_errors: yes
+
+- name: Set network interface to use DHCP
+  copy:
+    content: |
+      [Match]
+      Name=en*
+
+      [Network]
+      DHCP=yes
+
+      [DHCP]
+      UseDNS=yes
+      UseNTP=yes
+    dest: /etc/systemd/network/20-wired.network
+    mode: '0644'
+  notify: Restart systemd-networkd
+  when: configure_network_interface | bool
