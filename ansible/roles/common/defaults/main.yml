@@ -1,0 +1,7 @@
+---
+# Common Role - Default Variables
+
+system_hostname: vault-cube-demo
+system_locale: en_US.UTF-8
+system_timezone: UTC
+perform_system_upgrade: true

@@ -1,0 +1,7 @@
+---
+# Common Role - Handlers
+
+- name: Restart cron
+  systemd:
+    name: cron
+    state: restarted

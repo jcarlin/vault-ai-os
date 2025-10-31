@@ -1,0 +1,20 @@
+---
+# Networking Role - Default Variables
+
+configure_dns: false
+use_systemd_resolved: true
+configure_network_interface: false
+
+dns_servers:
+  - 8.8.8.8
+  - 8.8.4.4
+
+fallback_dns_servers:
+  - 1.1.1.1
+  - 1.0.0.1
+
+ntp_servers:
+  - 0.ubuntu.pool.ntp.org
+  - 1.ubuntu.pool.ntp.org
+  - 2.ubuntu.pool.ntp.org
+  - 3.ubuntu.pool.ntp.org

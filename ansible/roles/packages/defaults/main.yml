@@ -1,0 +1,39 @@
+---
+# Packages Role - Default Variables
+
+essential_packages:
+  - build-essential
+  - git
+  - curl
+  - wget
+  - vim
+  - nano
+  - openssh-server
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - software-properties-common
+
+development_packages:
+  - gcc
+  - g++
+  - make
+  - cmake
+  - pkg-config
+  - libssl-dev
+  - libffi-dev
+
+monitoring_packages:
+  - htop
+  - iotop
+  - sysstat
+  - lm-sensors
+
+network_packages:
+  - net-tools
+  - iproute2
+  - iputils-ping
+  - dnsutils
+  - tcpdump
+
+remove_snapd: false

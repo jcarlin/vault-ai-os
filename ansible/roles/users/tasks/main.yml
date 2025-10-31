@@ -1,0 +1,54 @@
+---
+# Users Role - User Management and Sudo Configuration
+
+- name: Ensure vaultadmin user exists
+  user:
+    name: "{{ vault_user }}"
+    comment: "Vault Administrator"
+    shell: /bin/bash
+    create_home: yes
+    state: present
+
+- name: Add vaultadmin to sudo group
+  user:
+    name: "{{ vault_user }}"
+    groups: sudo
+    append: yes
+
+- name: Configure passwordless sudo for vaultadmin
+  copy:
+    content: "{{ vault_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    dest: "/etc/sudoers.d/{{ vault_user }}"
+    mode: '0440'
+    validate: 'visudo -cf %s'
+
+- name: Set proper home directory permissions
+  file:
+    path: "/home/{{ vault_user }}"
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0755'
+    state: directory
+
+- name: Create .ssh directory for vaultadmin
+  file:
+    path: "/home/{{ vault_user }}/.ssh"
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0700'
+    state: directory
+
+- name: Add authorized SSH keys for vaultadmin
+  authorized_key:
+    user: "{{ vault_user }}"
+    key: "{{ item }}"
+    state: present
+  loop: "{{ ssh_public_keys }}"
+  when: ssh_public_keys is defined and ssh_public_keys | length > 0
+
+- name: Disable root login
+  user:
+    name: root
+    password: '!'
+    shell: /usr/sbin/nologin
+  when: disable_root_login | bool

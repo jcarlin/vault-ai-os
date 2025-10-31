@@ -1,0 +1,42 @@
+---
+# Packages Role - Essential Package Installation
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install essential system packages
+  apt:
+    name: "{{ essential_packages }}"
+    state: present
+    update_cache: yes
+
+- name: Install development tools
+  apt:
+    name: "{{ development_packages }}"
+    state: present
+
+- name: Install monitoring tools
+  apt:
+    name: "{{ monitoring_packages }}"
+    state: present
+
+- name: Install network utilities
+  apt:
+    name: "{{ network_packages }}"
+    state: present
+
+- name: Clean up apt cache
+  apt:
+    autoclean: yes
+    autoremove: yes
+
+- name: Remove unnecessary packages
+  apt:
+    name:
+      - snapd  # Remove snap if not needed
+    state: absent
+    purge: yes
+  when: remove_snapd | bool
+  ignore_errors: yes

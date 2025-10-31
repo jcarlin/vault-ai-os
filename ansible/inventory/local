@@ -1,0 +1,12 @@
+# Local Inventory for Packer Builds
+# Vault AI Systems - Cube Golden Image
+
+[local]
+localhost ansible_connection=local
+
+[vault_cube]
+localhost
+
+[vault_cube:vars]
+ansible_connection=local
+ansible_python_interpreter=/usr/bin/python3

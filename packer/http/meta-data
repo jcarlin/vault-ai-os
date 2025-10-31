@@ -1,0 +1,9 @@
+# Cloud-Init meta-data
+# Vault AI Systems - Cube Golden Image
+# This file provides instance-specific metadata to cloud-init
+
+# Instance ID - unique identifier for this installation
+instance-id: vault-cube-demo-001
+
+# Local hostname
+local-hostname: vault-cube-demo
