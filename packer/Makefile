@@ -36,7 +36,7 @@ clean-all: clean clean-vms
 
 # Standard build
 build:
-	packer build ubuntu-24.04-demo-box.pkr.hcl
+	packer build ubuntu-22.04-demo-box.pkr.hcl
 
 # Debug build with logging (recommended for troubleshooting)
 debug-build:
@@ -44,7 +44,7 @@ debug-build:
 
 # Force build (auto-cleanup)
 force-build:
-	packer build -force ubuntu-24.04-demo-box.pkr.hcl
+	packer build -force ubuntu-22.04-demo-box.pkr.hcl
 
 # List all VirtualBox VMs
 list-vms:

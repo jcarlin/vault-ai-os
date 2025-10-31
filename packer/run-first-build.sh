@@ -23,20 +23,20 @@ echo ""
 
 # Validate configuration
 echo "🔍 Validating Packer configuration..."
-packer validate ubuntu-24.04-demo-box.pkr.hcl
+packer validate ubuntu-22.04-demo-box.pkr.hcl
 echo "✅ Configuration valid"
 echo ""
 
 # Show what will be built
 echo "📋 Build Configuration:"
-packer inspect ubuntu-24.04-demo-box.pkr.hcl | grep -A 20 "builds:"
+packer inspect ubuntu-22.04-demo-box.pkr.hcl | grep -A 20 "builds:"
 echo ""
 
 # Confirm before starting
 echo "⏱️  Expected build time: 30-35 minutes"
 echo ""
 echo "🎯 What this build will do:"
-echo "  1. Create Ubuntu 24.04 LTS VM"
+echo "  1. Create Ubuntu 22.04 LTS VM"
 echo "  2. Configure vaultadmin user with SSH access"
 echo "  3. Update system packages"
 echo "  4. Install Python3 prerequisites"
@@ -64,7 +64,7 @@ echo ""
 
 # Run build with logging
 PACKER_LOG=1 PACKER_LOG_PATH=./packer-build.log \
-  packer build ubuntu-24.04-demo-box.pkr.hcl
+  packer build ubuntu-22.04-demo-box.pkr.hcl
 
 # Check if build succeeded
 if [ $? -eq 0 ]; then
