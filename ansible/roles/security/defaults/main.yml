@@ -2,7 +2,7 @@
 # Security Role - Default Variables
 
 # SSH Configuration
-ssh_port: 22  # Change to 2222 for non-standard port
+ssh_port: "22"  # Change to "2222" for non-standard port (string for consistency)
 ssh_permit_root_login: no
 ssh_password_authentication: no
 ssh_pubkey_authentication: yes
@@ -22,9 +22,9 @@ ufw_default_forward_policy: deny
 
 # UFW Rules - Allow these services
 ufw_allow_rules:
-  - { port: "{{ ssh_port }}", proto: tcp, comment: "SSH access" }
-  - { port: 80, proto: tcp, comment: "HTTP for future services" }
-  - { port: 443, proto: tcp, comment: "HTTPS for future services" }
+  - { port: "{{ ssh_port }}", proto: "tcp", comment: "SSH access" }
+  - { port: 80, proto: "tcp", comment: "HTTP for future services" }
+  - { port: 443, proto: "tcp", comment: "HTTPS for future services" }
 
 # fail2ban Configuration
 fail2ban_enable: true

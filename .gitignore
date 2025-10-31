@@ -1,3 +1,9 @@
+# claude code
+.claude/
+.claude_history
+claude_history.json
+docs/
+CLAUDE.md
 
 # Claude Flow generated files
 .claude/settings.local.json
@@ -36,6 +42,12 @@ docs/
 packer_cache/
 output-*/
 packer-manifest.json
+packer/manifest.json
+packer/packer_cache/
+packer/*.box
+packer/manifest.json
+packer/packer_cache/
+packer/output-*/
 
 # Ansible artifacts
 *.retry
@@ -106,7 +118,3 @@ agent-*.json
 swarm-*.json
 neural-models/*.onnx
 neural-models/*.wasm
-
-.claude/
-docs/
-CLAUDE.md
