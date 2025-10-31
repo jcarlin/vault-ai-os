@@ -1,0 +1,5 @@
+# Gitleaks ignore file - false positives
+# Format: <fingerprint>:<file>:<rule>:<line>
+
+# False positive: SOC2/ISO27001/HIPAA is just compliance documentation text
+e5c8ded72fbf163d033dc59db0616a53def383fb:.claude/agents/vault-ai-golden-image-architect.md:generic-api-key:74

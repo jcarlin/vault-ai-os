@@ -1,0 +1,282 @@
+---
+# Security Role - Main Tasks
+# Comprehensive security hardening for Vault Cube golden image
+
+# ============================================================================
+# SSH HARDENING
+# ============================================================================
+
+- name: Install OpenSSH server
+  apt:
+    name: openssh-server
+    state: present
+    update_cache: yes
+
+- name: Deploy SSH banner
+  template:
+    src: banner
+    dest: /etc/ssh/banner
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Backup original sshd_config
+  copy:
+    src: /etc/ssh/sshd_config
+    dest: /etc/ssh/sshd_config.backup
+    remote_src: yes
+    force: no
+
+- name: Deploy hardened SSH configuration
+  template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: '0600'
+    validate: '/usr/sbin/sshd -t -f %s'
+  notify: Restart SSH
+
+- name: Ensure SSH host keys exist with proper permissions
+  file:
+    path: "{{ item }}"
+    owner: root
+    group: root
+    mode: '0600'
+  loop:
+    - /etc/ssh/ssh_host_rsa_key
+    - /etc/ssh/ssh_host_ecdsa_key
+    - /etc/ssh/ssh_host_ed25519_key
+  ignore_errors: yes
+
+- name: Ensure SSH service is enabled and started
+  systemd:
+    name: ssh
+    enabled: yes
+    state: started
+
+# ============================================================================
+# UFW FIREWALL
+# ============================================================================
+
+- name: Install UFW firewall
+  apt:
+    name: ufw
+    state: present
+    update_cache: yes
+
+- name: Reset UFW to default state
+  ufw:
+    state: reset
+  when: ufw_enable | bool
+
+- name: Configure UFW default policies
+  ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  loop:
+    - { direction: incoming, policy: "{{ ufw_default_incoming_policy }}" }
+    - { direction: outgoing, policy: "{{ ufw_default_outgoing_policy }}" }
+    - { direction: routed, policy: "{{ ufw_default_forward_policy }}" }
+  when: ufw_enable | bool
+
+- name: Allow SSH through firewall before enabling
+  ufw:
+    rule: allow
+    port: "{{ ssh_port }}"
+    proto: tcp
+    comment: "SSH access - critical rule"
+  when: ufw_enable | bool
+
+- name: Configure UFW allow rules
+  ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment | default(omit) }}"
+  loop: "{{ ufw_allow_rules }}"
+  when: ufw_enable | bool
+
+- name: Enable UFW firewall
+  ufw:
+    state: enabled
+  when: ufw_enable | bool
+
+- name: Disable UFW firewall if not enabled
+  ufw:
+    state: disabled
+  when: not ufw_enable | bool
+
+# ============================================================================
+# FAIL2BAN
+# ============================================================================
+
+- name: Install fail2ban
+  apt:
+    name: fail2ban
+    state: present
+    update_cache: yes
+  when: fail2ban_enable | bool
+
+- name: Create fail2ban local configuration directory
+  file:
+    path: /etc/fail2ban
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: fail2ban_enable | bool
+
+- name: Configure fail2ban jail.local
+  copy:
+    content: |
+      [DEFAULT]
+      bantime = {{ fail2ban_bantime }}
+      findtime = {{ fail2ban_findtime }}
+      maxretry = {{ fail2ban_maxretry }}
+      destemail = {{ fail2ban_destemail }}
+      sender = {{ fail2ban_sender }}
+      action = %(action_)s
+      banaction = {{ fail2ban_banaction }}
+
+      [sshd]
+      enabled = true
+      port = {{ ssh_port }}
+      filter = sshd
+      logpath = /var/log/auth.log
+      maxretry = {{ fail2ban_maxretry }}
+      bantime = {{ fail2ban_bantime }}
+      findtime = {{ fail2ban_findtime }}
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: '0644'
+  when: fail2ban_enable | bool
+  notify: Restart fail2ban
+
+- name: Ensure fail2ban service is enabled and started
+  systemd:
+    name: fail2ban
+    enabled: yes
+    state: started
+  when: fail2ban_enable | bool
+
+# ============================================================================
+# AUTOMATIC SECURITY UPDATES
+# ============================================================================
+
+- name: Install unattended-upgrades package
+  apt:
+    name:
+      - unattended-upgrades
+      - apt-listchanges
+    state: present
+    update_cache: yes
+  when: unattended_upgrades_enable | bool
+
+- name: Configure unattended-upgrades
+  template:
+    src: 50unattended-upgrades.j2
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    owner: root
+    group: root
+    mode: '0644'
+  when: unattended_upgrades_enable | bool
+
+- name: Configure automatic updates timer
+  copy:
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Download-Upgradeable-Packages "1";
+      APT::Periodic::AutocleanInterval "7";
+      APT::Periodic::Unattended-Upgrade "1";
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: '0644'
+  when: unattended_upgrades_enable | bool
+
+# ============================================================================
+# SYSCTL SECURITY HARDENING
+# ============================================================================
+
+- name: Apply sysctl security hardening
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    sysctl_set: yes
+    reload: yes
+  loop:
+    # IP Forwarding (disabled for security)
+    - { name: 'net.ipv4.ip_forward', value: '0' }
+    - { name: 'net.ipv6.conf.all.forwarding', value: '0' }
+
+    # IP Spoofing protection
+    - { name: 'net.ipv4.conf.all.rp_filter', value: '1' }
+    - { name: 'net.ipv4.conf.default.rp_filter', value: '1' }
+
+    # Ignore ICMP redirects
+    - { name: 'net.ipv4.conf.all.accept_redirects', value: '0' }
+    - { name: 'net.ipv6.conf.all.accept_redirects', value: '0' }
+    - { name: 'net.ipv4.conf.all.secure_redirects', value: '0' }
+
+    # Do not send ICMP redirects
+    - { name: 'net.ipv4.conf.all.send_redirects', value: '0' }
+    - { name: 'net.ipv4.conf.default.send_redirects', value: '0' }
+
+    # Ignore ICMP ping requests
+    - { name: 'net.ipv4.icmp_echo_ignore_all', value: '0' }
+
+    # Ignore Broadcast pings
+    - { name: 'net.ipv4.icmp_echo_ignore_broadcasts', value: '1' }
+
+    # Log Martians (packets with impossible addresses)
+    - { name: 'net.ipv4.conf.all.log_martians', value: '1' }
+
+    # Disable source packet routing
+    - { name: 'net.ipv4.conf.all.accept_source_route', value: '0' }
+    - { name: 'net.ipv6.conf.all.accept_source_route', value: '0' }
+
+    # TCP SYN Cookie protection
+    - { name: 'net.ipv4.tcp_syncookies', value: '1' }
+
+    # TCP timestamps (disable to reduce fingerprinting)
+    - { name: 'net.ipv4.tcp_timestamps', value: '0' }
+
+    # Increase TCP buffer sizes for high-performance networking
+    - { name: 'net.core.rmem_max', value: '134217728' }
+    - { name: 'net.core.wmem_max', value: '134217728' }
+    - { name: 'net.ipv4.tcp_rmem', value: '4096 87380 67108864' }
+    - { name: 'net.ipv4.tcp_wmem', value: '4096 65536 67108864' }
+  when: enable_sysctl_hardening | bool
+  ignore_errors: yes
+
+- name: Disable IPv6 if configured
+  sysctl:
+    name: "{{ item }}"
+    value: '1'
+    state: present
+    sysctl_set: yes
+    reload: yes
+  loop:
+    - net.ipv6.conf.all.disable_ipv6
+    - net.ipv6.conf.default.disable_ipv6
+    - net.ipv6.conf.lo.disable_ipv6
+  when: disable_ipv6 | bool
+  ignore_errors: yes
+
+# ============================================================================
+# SECURITY VERIFICATION
+# ============================================================================
+
+- name: Display security hardening summary
+  debug:
+    msg:
+      - "Security hardening complete!"
+      - "SSH Port: {{ ssh_port }}"
+      - "SSH Root Login: {{ ssh_permit_root_login }}"
+      - "SSH Password Auth: {{ ssh_password_authentication }}"
+      - "UFW Firewall: {{ 'enabled' if ufw_enable else 'disabled' }}"
+      - "fail2ban: {{ 'enabled' if fail2ban_enable else 'disabled' }}"
+      - "Auto Updates: {{ 'enabled' if unattended_upgrades_enable else 'disabled' }}"

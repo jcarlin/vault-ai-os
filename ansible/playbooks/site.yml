@@ -15,6 +15,9 @@
     - role: users
       tags: ['users', 'base']
 
+    - role: security
+      tags: ['security', 'hardening']
+
     - role: packages
       tags: ['packages', 'base']
 
@@ -24,4 +27,7 @@
   post_tasks:
     - name: Display completion message
       debug:
-        msg: "Base system configuration complete!"
+        msg:
+          - "Vault Cube base system configuration complete!"
+          - "Security hardening applied: SSH, UFW firewall, fail2ban, auto-updates"
+          - "Ready for AI framework installation (Docker, Python, NVIDIA drivers)"

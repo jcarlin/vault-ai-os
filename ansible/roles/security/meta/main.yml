@@ -1,0 +1,30 @@
+---
+# Security Role - Metadata
+
+galaxy_info:
+  role_name: security
+  author: Vault AI Systems Engineering Team
+  description: Comprehensive security hardening for Vault Cube golden image
+  company: Vault AI Systems
+  license: Proprietary
+
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy  # 22.04 LTS
+
+  galaxy_tags:
+    - security
+    - hardening
+    - ssh
+    - firewall
+    - ufw
+    - fail2ban
+    - cis
+    - compliance
+
+dependencies:
+  - role: users
+    # Security role depends on users role to ensure vaultadmin user exists

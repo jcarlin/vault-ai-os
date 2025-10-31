@@ -1,0 +1,48 @@
+---
+# Security Role - Default Variables
+
+# SSH Configuration
+ssh_port: 22  # Change to 2222 for non-standard port
+ssh_permit_root_login: no
+ssh_password_authentication: no
+ssh_pubkey_authentication: yes
+ssh_allow_users:
+  - "{{ vault_user | default('vaultadmin') }}"
+ssh_x11_forwarding: no
+ssh_client_alive_interval: 300  # 5 minutes
+ssh_client_alive_count_max: 2
+ssh_max_auth_tries: 3
+ssh_protocol: 2
+
+# UFW Firewall Configuration
+ufw_enable: true
+ufw_default_incoming_policy: deny
+ufw_default_outgoing_policy: allow
+ufw_default_forward_policy: deny
+
+# UFW Rules - Allow these services
+ufw_allow_rules:
+  - { port: "{{ ssh_port }}", proto: tcp, comment: "SSH access" }
+  - { port: 80, proto: tcp, comment: "HTTP for future services" }
+  - { port: 443, proto: tcp, comment: "HTTPS for future services" }
+
+# fail2ban Configuration
+fail2ban_enable: true
+fail2ban_bantime: 3600  # 1 hour in seconds
+fail2ban_findtime: 600   # 10 minutes
+fail2ban_maxretry: 5
+fail2ban_destemail: root@localhost
+fail2ban_sender: fail2ban@{{ ansible_fqdn }}
+fail2ban_action: action_  # action_ = ban only, action_mw = ban + email with whois
+fail2ban_banaction: ufw
+
+# Automatic Security Updates
+unattended_upgrades_enable: true
+unattended_upgrades_auto_reboot: false
+unattended_upgrades_auto_reboot_time: "03:00"
+unattended_upgrades_mail_report: false
+unattended_upgrades_mail_to: root@localhost
+
+# Security Hardening Options
+disable_ipv6: false  # Set to true to disable IPv6
+enable_sysctl_hardening: true  # Apply sysctl security settings

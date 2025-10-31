@@ -2,6 +2,9 @@
 # Global Variables for All Hosts
 # These variables apply to all playbook runs regardless of inventory
 
+# Vault Admin User Configuration
+vault_user: vaultadmin
+
 # SSH Public Keys for Team Access
 # Add team members' public SSH keys here to grant access to vaultadmin user
 # Format: "ssh-rsa AAAAB3... user@host" or "ssh-ed25519 AAAAC3... user@host"

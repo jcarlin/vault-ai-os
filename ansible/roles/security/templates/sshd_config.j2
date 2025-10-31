@@ -1,0 +1,85 @@
+# SSH Daemon Configuration - Vault Cube Golden Image
+# Security hardened configuration for Epic 1a
+# Managed by Ansible - DO NOT EDIT MANUALLY
+
+# Network Configuration
+Port {{ ssh_port }}
+AddressFamily any
+ListenAddress 0.0.0.0
+ListenAddress ::
+
+# Protocol
+Protocol {{ ssh_protocol }}
+
+# Host Keys
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+# Logging
+SyslogFacility AUTH
+LogLevel VERBOSE
+
+# Authentication Settings
+LoginGraceTime 60
+PermitRootLogin {{ ssh_permit_root_login }}
+StrictModes yes
+MaxAuthTries {{ ssh_max_auth_tries }}
+MaxSessions 10
+
+# Public Key Authentication
+PubkeyAuthentication {{ 'yes' if ssh_pubkey_authentication else 'no' }}
+AuthorizedKeysFile .ssh/authorized_keys .ssh/authorized_keys2
+
+# Password Authentication
+PasswordAuthentication {{ 'yes' if ssh_password_authentication else 'no' }}
+PermitEmptyPasswords no
+
+# Challenge-Response Authentication
+ChallengeResponseAuthentication no
+KerberosAuthentication no
+GSSAPIAuthentication no
+
+# User/Group Access Control
+{% if ssh_allow_users is defined and ssh_allow_users | length > 0 %}
+AllowUsers {{ ssh_allow_users | join(' ') }}
+{% endif %}
+
+# Disable unused authentication methods
+HostbasedAuthentication no
+IgnoreRhosts yes
+
+# X11 and Agent Forwarding
+X11Forwarding {{ 'yes' if ssh_x11_forwarding else 'no' }}
+X11DisplayOffset 10
+PrintMotd no
+PrintLastLog yes
+TCPKeepAlive yes
+
+# Session Timeout
+ClientAliveInterval {{ ssh_client_alive_interval }}
+ClientAliveCountMax {{ ssh_client_alive_count_max }}
+
+# Disable tunneling for security
+PermitTunnel no
+PermitUserEnvironment no
+
+# SFTP Configuration
+Subsystem sftp /usr/lib/openssh/sftp-server -f AUTHPRIV -l INFO
+
+# Security Banners
+Banner /etc/ssh/banner
+
+# Disable unnecessary features
+AllowAgentForwarding no
+AllowTcpForwarding no
+GatewayPorts no
+
+# Modern Cryptography
+# Use strong ciphers, MACs, and key exchange algorithms
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256
+
+# Accept locale environment variables
+AcceptEnv LANG LC_*
