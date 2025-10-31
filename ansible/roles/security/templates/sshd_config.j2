@@ -22,7 +22,7 @@ LogLevel VERBOSE
 
 # Authentication Settings
 LoginGraceTime 60
-PermitRootLogin {{ ssh_permit_root_login }}
+PermitRootLogin {{ 'yes' if ssh_permit_root_login else 'no' }}
 StrictModes yes
 MaxAuthTries {{ ssh_max_auth_tries }}
 MaxSessions 10

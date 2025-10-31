@@ -1,6 +1,5 @@
 # Packer template for Ubuntu 22.04 LTS Demo Box
 # Vault AI Systems - Cube Golden Image
-# Phase: Epic 1a - Demo Box Operation
 
 # Required Packer version
 packer {
@@ -189,29 +188,34 @@ build {
     ]
   }
 
-  # Install Ansible prerequisites
-  # DISABLED FOR FIRST BUILD - Will enable after SSH connectivity is proven
-  # provisioner "shell" {
-  #   inline = [
-  #     "echo 'Installing Python and Ansible prerequisites...'",
-  #     "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip python3-apt",
-  #     "echo 'Prerequisites installed!'"
-  #   ]
-  # }
+  # Install Ansible (required for ansible-local provisioner)
+  provisioner "shell" {
+    inline = [
+      "echo 'Installing Ansible...'",
+      "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common",
+      "sudo DEBIAN_FRONTEND=noninteractive apt-add-repository --yes --update ppa:ansible/ansible",
+      "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ansible",
+      "echo 'Verifying Ansible installation...'",
+      "ansible --version",
+      "echo 'Ansible installed successfully!'"
+    ]
+  }
 
   # Ansible provisioning - Base system configuration
-  # TEMPORARILY DISABLED: ansible-local has path issues with relative paths
-  # Will re-enable after first successful build proves SSH connectivity works
-  # provisioner "ansible-local" {
-  #   playbook_file   = "../ansible/playbooks/site.yml"
-  #   role_paths      = [
-  #     "../ansible/roles/common",
-  #     "../ansible/roles/users",
-  #     "../ansible/roles/packages",
-  #     "../ansible/roles/networking"
-  #   ]
-  #   staging_directory = "/tmp/ansible"
-  # }
+  provisioner "ansible-local" {
+    playbook_file   = "../ansible/playbooks/site.yml"
+    role_paths      = [
+      "../ansible/roles/common",
+      "../ansible/roles/users",
+      "../ansible/roles/security",
+      "../ansible/roles/packages",
+      "../ansible/roles/networking"
+    ]
+    staging_directory = "/tmp/ansible"
+    extra_arguments = [
+      "--extra-vars", "ansible_python_interpreter=/usr/bin/python3"
+    ]
+  }
 
   # Clean up before finalizing image
   provisioner "shell" {
