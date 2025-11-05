@@ -1,0 +1,26 @@
+---
+# Python Environment Role - Metadata
+# Epic 1a - Task 1a.7
+
+galaxy_info:
+  author: Vault AI Systems
+  description: Python 3.12 environment for ML workloads
+  company: Vault AI Systems
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy  # 22.04 LTS
+
+  galaxy_tags:
+    - python
+    - python3
+    - ml
+    - ai
+    - machine-learning
+    - deep-learning
+
+dependencies:
+  - role: common
+  - role: packages

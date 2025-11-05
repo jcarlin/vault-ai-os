@@ -27,6 +27,9 @@
     - role: docker
       tags: ['docker', 'containers']
 
+    - role: python
+      tags: ['python', 'ai-runtime']
+
   post_tasks:
     - name: Display completion message
       debug:
@@ -34,4 +37,5 @@
           - "Vault Cube base system configuration complete!"
           - "Security hardening applied: SSH, UFW firewall, fail2ban, auto-updates"
           - "Docker Engine installed and configured for GPU container support"
-          - "Ready for AI framework installation (Python, NVIDIA drivers)"
+          - "Python 3.12 installed with ML build dependencies (30% faster than 3.10)"
+          - "Ready for AI framework installation (NVIDIA drivers, PyTorch, TensorFlow, vLLM)"

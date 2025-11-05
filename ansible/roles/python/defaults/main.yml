@@ -1,0 +1,43 @@
+---
+# Python Environment Role - Default Variables
+# Installs Python 3.12 for ML framework compatibility
+# Epic 1a - Task 1a.7
+
+# Python version
+python_version: "3.12"
+
+# Python packages to install
+python_packages:
+  - python3.12
+  - python3.12-full
+  - python3.12-dev
+  - python3.12-venv
+  - python3.12-distutils
+  - python-is-python3
+
+# Build dependencies for ML packages
+# Required for compiling NumPy, SciPy, PyTorch, TensorFlow, etc.
+python_build_deps:
+  - gcc
+  - g++
+  - make
+  - cmake
+  - libssl-dev
+  - libffi-dev
+  - libbz2-dev
+  - libreadline-dev
+  - libsqlite3-dev
+  - libncurses5-dev
+  - libncursesw5-dev
+  - xz-utils
+  - tk-dev
+  - libxml2-dev
+  - libxmlsec1-dev
+  - liblzma-dev
+
+# Pip configuration
+pip_upgrade: true
+pip_cache_dir: "/var/cache/pip"
+
+# PPA configuration
+deadsnakes_ppa: "ppa:deadsnakes/ppa"
