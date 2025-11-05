@@ -1,0 +1,10 @@
+{
+  "exec-opts": {{ docker_daemon_config['exec-opts'] | to_json }},
+  "log-driver": "{{ docker_daemon_config['log-driver'] }}",
+  "log-opts": {
+    "max-size": "{{ docker_daemon_config['log-opts']['max-size'] }}",
+    "max-file": "{{ docker_daemon_config['log-opts']['max-file'] }}"
+  },
+  "storage-driver": "{{ docker_daemon_config['storage-driver'] }}",
+  "live-restore": {{ docker_daemon_config['live-restore'] | lower }}
+}

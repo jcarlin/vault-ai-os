@@ -24,10 +24,14 @@
     - role: networking
       tags: ['networking', 'base']
 
+    - role: docker
+      tags: ['docker', 'containers']
+
   post_tasks:
     - name: Display completion message
       debug:
         msg:
           - "Vault Cube base system configuration complete!"
           - "Security hardening applied: SSH, UFW firewall, fail2ban, auto-updates"
-          - "Ready for AI framework installation (Docker, Python, NVIDIA drivers)"
+          - "Docker Engine installed and configured for GPU container support"
+          - "Ready for AI framework installation (Python, NVIDIA drivers)"

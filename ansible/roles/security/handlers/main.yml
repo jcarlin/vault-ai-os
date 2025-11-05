@@ -7,6 +7,7 @@
     name: ssh
     state: restarted
     daemon_reload: yes
+  when: not (packer_build | default(false))
 
 - name: Reload SSH
   systemd:

@@ -209,11 +209,13 @@ build {
       "../ansible/roles/users",
       "../ansible/roles/security",
       "../ansible/roles/packages",
-      "../ansible/roles/networking"
+      "../ansible/roles/networking",
+      "../ansible/roles/docker"
     ]
     staging_directory = "/tmp/ansible"
     extra_arguments = [
-      "--extra-vars", "ansible_python_interpreter=/usr/bin/python3"
+      "--extra-vars", "ansible_python_interpreter=/usr/bin/python3",
+      "--extra-vars", "packer_build=true"
     ]
   }
 

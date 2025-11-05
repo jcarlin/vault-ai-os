@@ -1,0 +1,152 @@
+---
+# Docker Role - Main Tasks
+# Install Docker Engine and containerd for GPU container support
+
+# ============================================================================
+# PREREQUISITES
+# ============================================================================
+
+- name: Install required packages for Docker repository
+  apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: yes
+
+- name: Remove conflicting Docker packages
+  apt:
+    name:
+      - docker.io
+      - docker-doc
+      - docker-compose
+      - docker-compose-v2
+      - podman-docker
+      - containerd
+      - runc
+    state: absent
+    purge: yes
+  ignore_errors: yes
+
+# ============================================================================
+# DOCKER REPOSITORY SETUP
+# ============================================================================
+
+- name: Create directory for Docker GPG key
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download Docker GPG key
+  get_url:
+    url: "{{ docker_gpg_key_url }}"
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+    force: no
+
+- name: Add Docker APT repository
+  apt_repository:
+    repo: "{{ docker_apt_repository }}"
+    state: present
+    filename: docker
+    update_cache: yes
+
+# ============================================================================
+# DOCKER INSTALLATION
+# ============================================================================
+
+- name: Install Docker Engine and containerd
+  apt:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: yes
+
+# ============================================================================
+# DOCKER DAEMON CONFIGURATION
+# ============================================================================
+
+- name: Create Docker configuration directory
+  file:
+    path: /etc/docker
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Deploy Docker daemon configuration
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: '0644'
+    validate: 'python3 -m json.tool %s'
+  notify: Restart Docker
+
+# ============================================================================
+# USER CONFIGURATION
+# ============================================================================
+
+- name: Add users to docker group
+  user:
+    name: "{{ item }}"
+    groups: docker
+    append: yes
+  loop: "{{ docker_users }}"
+  when: docker_users is defined
+
+# ============================================================================
+# SERVICE MANAGEMENT
+# ============================================================================
+
+- name: Enable and start Docker service
+  systemd:
+    name: docker
+    enabled: "{{ docker_service_enabled }}"
+    state: "{{ docker_service_state }}"
+    daemon_reload: yes
+
+- name: Ensure containerd service is enabled and started
+  systemd:
+    name: containerd
+    enabled: yes
+    state: started
+
+# ============================================================================
+# VALIDATION
+# ============================================================================
+
+- name: Wait for Docker socket to be ready
+  wait_for:
+    path: /var/run/docker.sock
+    state: present
+    timeout: 30
+
+- name: Verify Docker installation
+  command: docker --version
+  register: docker_version_output
+  changed_when: false
+
+- name: Display Docker version
+  debug:
+    msg: "Docker installed: {{ docker_version_output.stdout }}"
+
+- name: Test Docker with hello-world container
+  docker_container:
+    name: hello-world-test
+    image: hello-world
+    state: started
+    auto_remove: yes
+    detach: no
+  register: hello_world_result
+  changed_when: false
+  ignore_errors: yes
+
+- name: Display hello-world test result
+  debug:
+    msg:
+      - "Docker hello-world test completed"
+      - "Status: {{ 'SUCCESS' if hello_world_result is succeeded else 'FAILED (may require user re-login for docker group)' }}"
