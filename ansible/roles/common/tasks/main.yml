@@ -38,6 +38,14 @@
       - software-properties-common
     state: present
 
+- name: Install Ubuntu HWE kernel for AMD Threadripper PRO 7975WX support
+  apt:
+    name: linux-generic-hwe-22.04
+    state: present
+  tags:
+    - kernel
+    - hwe
+
 - name: Configure system locale
   locale_gen:
     name: "{{ system_locale }}"

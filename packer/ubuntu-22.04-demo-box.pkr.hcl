@@ -1,5 +1,6 @@
 # Packer template for Ubuntu 22.04 LTS Demo Box
 # Vault AI Systems - Cube Golden Image
+# TODO: update the iso_url to "https://releases.ubuntu.com/22.04.5/ubuntu-22.04.5-live-server-amd64.iso"
 
 # Required Packer version
 packer {
@@ -134,7 +135,7 @@ source "virtualbox-iso" "ubuntu-2204" {
     ["modifyvm", "{{.Name}}", "--usb", "on"],
     # VISIBILITY: Enable serial console logging (must be before boot, not in vboxmanage_post)
     ["modifyvm", "{{.Name}}", "--uart1", "0x3F8", "4"],
-    # ["modifyvm", "{{.Name}}", "--uartmode1", "file", "vault-cube-demo-box-console.log"]
+    ["modifyvm", "{{.Name}}", "--uartmode1", "file", "vault-cube-demo-box-console.log"]
   ]
 }
 
@@ -203,19 +204,20 @@ build {
 
   # Ansible provisioning - Base system configuration
   provisioner "ansible-local" {
-    playbook_file   = "../ansible/playbooks/site.yml"
-    role_paths      = [
+    playbook_file     = "../ansible/playbooks/site.yml"
+    role_paths = [
       "../ansible/roles/common",
       "../ansible/roles/users",
-      "../ansible/roles/security",
+      # "../ansible/roles/security",
       "../ansible/roles/packages",
-      "../ansible/roles/networking",
-      "../ansible/roles/docker"
+      "../ansible/roles/networking"
+      # "../ansible/roles/docker",
+      # "../ansible/roles/python"
     ]
     staging_directory = "/tmp/ansible"
     extra_arguments = [
-      "--extra-vars", "ansible_python_interpreter=/usr/bin/python3",
-      "--extra-vars", "packer_build=true"
+      "--extra-vars={\"ansible_python_interpreter\":\"/usr/bin/python3\",\"packer_build\":true}",
+      "--skip-tags=security,hardening,docker,python,ai-runtime,containers"
     ]
   }
 

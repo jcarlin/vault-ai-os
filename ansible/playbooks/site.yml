@@ -15,20 +15,11 @@
     - role: users
       tags: ['users', 'base']
 
-    - role: security
-      tags: ['security', 'hardening']
-
     - role: packages
       tags: ['packages', 'base']
 
     - role: networking
       tags: ['networking', 'base']
-
-    - role: docker
-      tags: ['docker', 'containers']
-
-    - role: python
-      tags: ['python', 'ai-runtime']
 
   post_tasks:
     - name: Display completion message

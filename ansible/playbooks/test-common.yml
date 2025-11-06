@@ -1,0 +1,22 @@
+---
+# Test Playbook - Common Role Only
+# Used for testing Packer ansible-local provisioner
+
+- name: Test Common Role
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: common
+      tags: ['common', 'base']
+
+  post_tasks:
+    - name: Display completion message
+      debug:
+        msg:
+          - "Common role configuration complete!"
+          - "Timezone set to UTC"
+          - "Hostname configured"
+          - "System packages updated"
+          - "HWE kernel installed for Threadripper PRO support"
