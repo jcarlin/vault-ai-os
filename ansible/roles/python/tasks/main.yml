@@ -29,11 +29,17 @@
     - python
     - build-deps
 
+- name: Bootstrap pip for Python {{ python_version }} using ensurepip
+  ansible.builtin.command: python3.12 -m ensurepip --upgrade
+  args:
+    creates: /usr/local/lib/python3.12/dist-packages/pip
+  tags:
+    - python
+    - pip
+
 - name: Upgrade pip for Python {{ python_version }}
-  ansible.builtin.pip:
-    name: pip
-    executable: pip3.12
-    state: latest
+  ansible.builtin.command: python3.12 -m pip install --upgrade pip
+  changed_when: true
   when: pip_upgrade | bool
   tags:
     - python
@@ -64,7 +70,7 @@
     - verify
 
 - name: Verify pip installation
-  ansible.builtin.command: pip3.12 --version
+  ansible.builtin.command: python3.12 -m pip --version
   register: pip_version_output
   changed_when: false
   tags:

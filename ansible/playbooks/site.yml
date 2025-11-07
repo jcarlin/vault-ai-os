@@ -21,12 +21,23 @@
     - role: networking
       tags: ['networking', 'base']
 
+    - role: docker
+      tags: ['docker']
+
+    - role: python
+      tags: ['python']
+
   post_tasks:
     - name: Display completion message
       debug:
         msg:
-          - "Vault Cube base system configuration complete!"
-          - "Security hardening applied: SSH, UFW firewall, fail2ban, auto-updates"
-          - "Docker Engine installed and configured for GPU container support"
-          - "Python 3.12 installed with ML build dependencies (30% faster than 3.10)"
+          - "✅ Vault Cube base system configuration complete!"
+          - "⚠️  DEMO CONFIGURATION - Security hardening NOT applied"
+          - "   For production: Enable security role in playbook and Packer config"
+          - ""
+          - "Installed components:"
+          - "  • Docker Engine configured for GPU container support"
+          - "  • Python 3.12 with ML build dependencies (30% faster than 3.10)"
+          - "  • System packages and networking configured"
+          - ""
           - "Ready for AI framework installation (NVIDIA drivers, PyTorch, TensorFlow, vLLM)"
