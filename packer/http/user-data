@@ -1,97 +1,36 @@
 #cloud-config
-# Ubuntu 22.04 LTS Autoinstall Configuration
-# Vault AI Systems - Cube Golden Image
-# User created in identity section BEFORE SSH starts (eliminates race condition)
-
 autoinstall:
   version: 1
-  # Prevent ANY interactive prompts during installation
   interactive-sections: []
-
-  # APPROACH 1: identity section (COMMENTED OUT - using user-data approach instead)
-  # identity:
-  #   hostname: vault-cube-demo
-  #   realname: 'Vault AI'
-  #   username: vaultadmin
-  #   password: "$6$rounds=656000$rGzgtCEONmiYotJd$JUACpbvUX5Ur7FgAhHuwzdJvxX9KgYU8cDd/AqS6od9bXCaj1In.uqKO6ow7rTyMkk37Dz1maBPybZrEjrGKu1"
-
-  # APPROACH 2: user-data with users module (ACTIVE - supports native group assignment)
-  user-data:
+  refresh-installer:
+    update: false
+  identity:
     hostname: vault-cube-demo
-    users:
-      - name: vaultadmin
-        # Password: vaultadmin (SHA-512 hash - COMPLETE)
-        passwd: "$6$rounds=656000$rGzgtCEONmiYotJd$JUACpbvUX5Ur7FgAhHuwzdJvxX9KgYU8cDd/AqS6od9bXCaj1In.uqKO6ow7rTyMkk37Dz1maBPybZrEjrGKu1"
-        groups: [adm, sudo]
-        lock_passwd: false
-        shell: /bin/bash
-        sudo: ALL=(ALL) NOPASSWD:ALL
-        gecos: 'Vault AI'
-
-  # Locale and keyboard
+    username: vaultadmin
+    password: "$6$rounds=656000$rGzgtCEONmiYotJd$JUACpbvUX5Ur7FgAhHuwzdJvxX9KgYU8cDd/AqS6od9bXCaj1In.uqKO6ow7rTyMkk37Dz1maBPybZrEjrGKu1"
   locale: en_US.UTF-8
   keyboard:
     layout: us
-
-  # Network - DHCP on any interface
   network:
     version: 2
     ethernets:
-      default:
+      all:
         match:
-          name: "e*"  # Matches en*, eth*, enp*, ens* - broader compatibility
+          name: "e*"
         dhcp4: true
-        dhcp-identifier: mac
-
-  # Storage - simple LVM
   storage:
     layout:
       name: lvm
-
-  # SSH - ensure it's installed and enabled with password auth
   ssh:
     install-server: true
     allow-pw: true
-    # authorized-keys:
-      # - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBo1PjHoKXrmmu440AnUoU/emaFBoEl0Chq3Ge8810KG julian@vaultaisystems.com
-
-  # Minimal packages for installation
   packages:
     - openssh-server
-    - python3-apt  # Required for Ansible
-
-  # Late commands - Configure SSH
-  # NOTE: User creation, groups, and sudo are handled by user-data.users (see lines 19-29)
   late-commands:
-    # APPROACH 1: usermod + sudoers (COMMENTED OUT - handled by user-data.users instead)
-    # - curtin in-target -- usermod -aG adm,sudo vaultadmin
-    # - curtin in-target -- bash -c 'echo "vaultadmin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vaultadmin'
-    # - curtin in-target -- chmod 0440 /etc/sudoers.d/vaultadmin
-
-    # Ensure SSH is enabled and will start on boot
-    - curtin in-target -- systemctl enable ssh.service
-
-    # FORCE SSH password authentication with drop-in config (overrides Ubuntu defaults)
-    # - curtin in-target -- mkdir -p /etc/ssh/sshd_config.d
-    # - curtin in-target -- bash -c 'echo "PasswordAuthentication yes" > /etc/ssh/sshd_config.d/99-packer.conf'
-    # - curtin in-target -- bash -c 'echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config.d/99-packer.conf'
-    # - curtin in-target -- bash -c 'echo "PermitRootLogin no" >> /etc/ssh/sshd_config.d/99-packer.conf'
-    # - curtin in-target -- bash -c 'echo "UsePAM yes" >> /etc/ssh/sshd_config.d/99-packer.conf'
-    # - curtin in-target -- chmod 644 /etc/ssh/sshd_config.d/99-packer.conf
-
-    # Restart SSH to apply configuration
-    # - curtin in-target -- systemctl restart ssh
-
-    # Wait for SSH to be fully ready (CRITICAL for Packer connection)
-    - curtin in-target -- bash -c 'for i in {1..60}; do systemctl is-active ssh && echo "SSH is active" && break || sleep 1; done'
-
-    # Verify user was created correctly (should already exist from identity)
-    # - curtin in-target -- id vaultadmin
-    # - curtin in-target -- getent passwd vaultadmin
-
-    # Set proper home directory permissions
-    # - curtin in-target -- chmod 755 /home/vaultadmin
-    # - curtin in-target -- chown -R vaultadmin:vaultadmin /home/vaultadmin
-
-    # Final SSH status check (verify service is active)
-    - curtin in-target -- systemctl is-active ssh
+    # Create user if not exists (fallback if identity section failed)
+    - curtin in-target -- bash -c 'id vaultadmin || useradd -m -s /bin/bash -G adm,sudo vaultadmin'
+    - curtin in-target -- bash -c 'echo "vaultadmin:vaultadmin" | chpasswd'
+    - curtin in-target -- bash -c 'echo "vaultadmin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vaultadmin'
+    - curtin in-target -- chmod 440 /etc/sudoers.d/vaultadmin
+    - curtin in-target -- sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    - curtin in-target -- systemctl enable ssh
