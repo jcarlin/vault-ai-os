@@ -36,4 +36,45 @@ network_packages:
   - dnsutils
   - tcpdump
 
+# Hardware detection & diagnostics
+hardware_packages:
+  - pciutils          # lspci - PCI device listing
+  - usbutils          # lsusb - USB device listing
+  - lshw              # Detailed hardware lister
+  - dmidecode         # BIOS/system info
+
+# Disk management & health
+disk_packages:
+  - smartmontools     # SMART disk health monitoring
+  - nvme-cli          # NVMe SSD management
+  - parted            # Partition management
+  - gdisk             # GPT partition tool
+
+# Shell productivity
+shell_packages:
+  - tmux              # Terminal multiplexer
+  - tree              # Directory tree display
+  - jq                # JSON processor
+  - rsync             # File synchronization
+
+# Compression & archives
+archive_packages:
+  - unzip             # ZIP extraction
+  - p7zip-full        # 7z support
+  - zstd              # Fast compression
+
+# Network diagnostics
+network_diagnostic_packages:
+  - ethtool           # NIC configuration
+  - iperf3            # Network bandwidth testing
+  - mtr               # Better traceroute
+
+# System utilities
+system_packages:
+  - acl               # Access control lists
+  - bc                # Calculator
+  - strace            # System call tracer
+  - file              # File type detection
+  - psmisc            # killall, pstree, fuser
+
 remove_snapd: false
