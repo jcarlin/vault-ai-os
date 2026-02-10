@@ -1,0 +1,30 @@
+---
+# ansible/roles/nvidia/meta/main.yml
+
+galaxy_info:
+  author: Vault AI Systems
+  description: Install NVIDIA GPU drivers, CUDA toolkit, and cuDNN for multi-GPU AI workloads
+  company: Vault AI Systems
+  license: MIT
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy  # 22.04 LTS
+
+  galaxy_tags:
+    - gpu
+    - nvidia
+    - cuda
+    - cudnn
+    - deep-learning
+    - machine-learning
+    - ai
+    - rtx
+    - a100
+    - h100
+
+dependencies:
+  - role: common
+    when: nvidia_install_prerequisites | default(true)

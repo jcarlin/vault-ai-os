@@ -12,6 +12,7 @@ python_packages:
   - python3.12-full
   - python3.12-dev
   - python3.12-venv
+  - python3-pip  # Install pip via apt (ensurepip is disabled on Ubuntu)
   - python-is-python3
 
 # Build dependencies for ML packages
@@ -35,7 +36,11 @@ python_build_deps:
   - liblzma-dev
 
 # Pip configuration
-pip_upgrade: true
+# Note: pip_upgrade disabled by default for golden images
+# - Ubuntu 22.04: Python 3.12 lacks distutils (removed in 3.12)
+# - Ubuntu 24.04: PEP 668 prevents system pip modifications
+# System pip from apt is stable and sufficient for base image
+pip_upgrade: false
 pip_cache_dir: "/var/cache/pip"
 
 # PPA configuration

@@ -1,0 +1,22 @@
+---
+# ansible/roles/nvidia/tasks/install_cudnn.yml
+# Install cuDNN (CUDA Deep Neural Network library)
+
+- name: Install cuDNN
+  apt:
+    name:
+      - libcudnn{{ cudnn_version | replace('.', '') }}-cuda-{{ cuda_version | split('.')[0] }}
+      - libcudnn{{ cudnn_version | replace('.', '') }}-dev-cuda-{{ cuda_version | split('.')[0] }}
+    state: present
+  register: cudnn_installed
+  failed_when: false
+
+- name: Display cuDNN installation status
+  debug:
+    msg: "cuDNN {{ cudnn_version }} installed successfully"
+  when: cudnn_installed.changed | default(false)
+
+- name: Note if cuDNN installation failed
+  debug:
+    msg: "cuDNN installation skipped or failed. This is not critical for basic GPU operation."
+  when: cudnn_installed.failed | default(false)

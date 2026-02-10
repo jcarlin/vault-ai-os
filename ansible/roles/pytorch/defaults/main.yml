@@ -1,0 +1,8 @@
+---
+# ansible/roles/pytorch/defaults/main.yml
+
+pytorch_version: "latest"  # or specific version like "2.7.0+"
+pytorch_cuda_version: "cu128"  # CUDA 12.8
+pytorch_install_torchvision: true
+pytorch_install_torchaudio: true
+pytorch_index_url: "https://download.pytorch.org/whl/{{ pytorch_cuda_version }}"

@@ -1,0 +1,65 @@
+---
+# ansible/roles/nvidia/tasks/validate.yml
+# Validate NVIDIA driver installation
+
+- name: Check if nvidia-smi is available
+  command: which nvidia-smi
+  register: nvidia_smi_check
+  changed_when: false
+  failed_when: false
+
+- name: Run nvidia-smi to validate driver
+  command: nvidia-smi
+  register: nvidia_smi_output
+  changed_when: false
+  failed_when: false
+  when: nvidia_smi_check.rc == 0
+
+- name: Display nvidia-smi output
+  debug:
+    msg: "{{ nvidia_smi_output.stdout_lines }}"
+  when:
+    - nvidia_smi_check.rc == 0
+    - nvidia_smi_output.rc == 0
+
+- name: Query GPU count
+  shell: nvidia-smi --query-gpu=count --format=csv,noheader | head -1
+  register: gpu_count
+  changed_when: false
+  failed_when: false
+  when: nvidia_smi_check.rc == 0
+
+- name: Display detected GPU count
+  debug:
+    msg: "Detected {{ gpu_count.stdout }} GPU(s)"
+  when:
+    - nvidia_smi_check.rc == 0
+    - gpu_count.rc == 0
+
+- name: Warning if GPU count mismatch
+  debug:
+    msg: "WARNING: Expected {{ nvidia_expected_gpu_count }} GPUs, but detected {{ gpu_count.stdout }}"
+  when:
+    - nvidia_smi_check.rc == 0
+    - gpu_count.rc == 0
+    - gpu_count.stdout | int != nvidia_expected_gpu_count | int
+
+- name: Check for NVIDIA errors in dmesg
+  shell: dmesg | grep -i nvidia | grep -i error | wc -l
+  register: nvidia_errors
+  changed_when: false
+  failed_when: false
+
+- name: Display error count
+  debug:
+    msg: "{{ nvidia_errors.stdout }} NVIDIA errors found in dmesg"
+  when: nvidia_errors.stdout | int > 0
+
+- name: Validation summary
+  debug:
+    msg:
+      - "NVIDIA Driver Validation Complete"
+      - "Driver installed: {{ nvidia_driver_installed.changed | default('Previously installed') }}"
+      - "nvidia-smi available: {{ 'Yes' if nvidia_smi_check.rc == 0 else 'No' }}"
+      - "GPUs detected: {{ gpu_count.stdout | default('N/A') }}"
+      - "CUDA installed: {{ cuda_installed.changed | default('Previously installed') if nvidia_install_cuda else 'Skipped' }}"

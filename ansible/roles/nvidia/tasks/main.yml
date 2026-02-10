@@ -1,0 +1,49 @@
+---
+# ansible/roles/nvidia/tasks/main.yml
+# Main tasks for NVIDIA driver installation
+
+- name: Include GPU detection tasks
+  include_tasks: detect_gpu.yml
+  tags: ['nvidia', 'detect']
+
+- name: Include kernel upgrade tasks
+  include_tasks: upgrade_kernel.yml
+  when: nvidia_needs_kernel_upgrade | default(false)
+  tags: ['nvidia', 'kernel']
+
+- name: Include GCC installation tasks
+  include_tasks: install_gcc.yml
+  when: nvidia_needs_gcc_upgrade | default(false)
+  tags: ['nvidia', 'gcc']
+
+- name: Include driver installation tasks
+  include_tasks: install_driver.yml
+  tags: ['nvidia', 'driver']
+
+- name: Include CUDA installation tasks
+  include_tasks: install_cuda.yml
+  when: nvidia_install_cuda | default(true)
+  tags: ['nvidia', 'cuda']
+
+- name: Include cuDNN installation tasks
+  include_tasks: install_cudnn.yml
+  when: nvidia_install_cudnn | default(true)
+  tags: ['nvidia', 'cudnn']
+
+- name: Include validation tasks
+  include_tasks: validate.yml
+  when: nvidia_validate_after_install | default(true)
+  tags: ['nvidia', 'validate']
+
+- name: Include performance tuning tasks
+  include_tasks: performance_tuning.yml
+  tags: ['nvidia', 'performance']
+
+- name: Reboot system if required
+  reboot:
+    reboot_timeout: "{{ nvidia_reboot_timeout }}"
+    msg: "Rebooting to load NVIDIA kernel modules"
+  when:
+    - nvidia_reboot_after_install | default(true)
+    - nvidia_driver_installed.changed | default(false)
+  tags: ['nvidia', 'reboot']

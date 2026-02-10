@@ -125,6 +125,33 @@ log_info "Preparing installation..."
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
+# Set non-interactive mode to avoid prompts
+export DEBIAN_FRONTEND=noninteractive
+
+# Pre-seed debconf to avoid interactive prompts
+log_info "Pre-configuring package settings..."
+
+# Check if debconf-set-selections is available (should be on base Ubuntu)
+if command -v debconf-set-selections &> /dev/null; then
+    # Keyboard configuration - use US layout by default
+    echo "keyboard-configuration keyboard-configuration/layoutcode string us" | debconf-set-selections
+    echo "keyboard-configuration keyboard-configuration/layout select English (US)" | debconf-set-selections
+    echo "keyboard-configuration keyboard-configuration/variant select English (US)" | debconf-set-selections
+    echo "keyboard-configuration keyboard-configuration/model select Generic 105-key PC (intl.)" | debconf-set-selections
+    echo "keyboard-configuration keyboard-configuration/xkb-keymap select us" | debconf-set-selections
+
+    # Display manager - use gdm3
+    echo "gdm3 shared/default-x-display-manager select gdm3" | debconf-set-selections
+    echo "lightdm shared/default-x-display-manager select gdm3" | debconf-set-selections
+    echo "sddm shared/default-x-display-manager select gdm3" | debconf-set-selections
+
+    # Console setup
+    echo "console-setup console-setup/charmap47 select UTF-8" | debconf-set-selections
+    log_info "Package settings pre-configured"
+else
+    log_warn "debconf-set-selections not available - you may see interactive prompts"
+fi
+
 # Install packages using dpkg
 log_info "Installing packages (this may take several minutes)..."
 echo ""

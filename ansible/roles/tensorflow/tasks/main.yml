@@ -1,0 +1,17 @@
+---
+# ansible/roles/tensorflow/tasks/main.yml
+
+- name: Install TensorFlow
+  pip:
+    name: "tensorflow=={{ tensorflow_version }}"
+    executable: pip3.12
+  register: tensorflow_installed
+
+- name: Verify TensorFlow installation
+  shell: python3.12 -c "import tensorflow as tf; print(f'TensorFlow {tf.__version__}'); print(f'GPU devices: {len(tf.config.list_physical_devices(\"GPU\"))}')"
+  register: tensorflow_check
+  changed_when: false
+
+- name: Display TensorFlow configuration
+  debug:
+    msg: "{{ tensorflow_check.stdout_lines }}"

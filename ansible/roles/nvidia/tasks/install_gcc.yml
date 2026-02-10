@@ -1,0 +1,50 @@
+---
+# ansible/roles/nvidia/tasks/install_gcc.yml
+# Install GCC 14 for Blackwell architecture (RTX 50 series)
+
+- name: Check if GCC upgrade is needed
+  debug:
+    msg: "GCC upgrade required for {{ nvidia_architecture_detected }} architecture"
+
+- name: Add GCC PPA repository
+  apt_repository:
+    repo: "ppa:ubuntu-toolchain-r/test"
+    state: present
+    update_cache: yes
+  when: nvidia_architecture_detected == "blackwell"
+
+- name: Install GCC 14 for Blackwell
+  apt:
+    name:
+      - "{{ nvidia_gcc_package_blackwell }}"
+      - "{{ nvidia_gxx_package_blackwell }}"
+    state: present
+  when: nvidia_architecture_detected == "blackwell"
+  register: gcc_installed
+
+- name: Set GCC 14 as default (using update-alternatives)
+  alternatives:
+    name: gcc
+    path: /usr/bin/gcc-14
+    priority: 100
+  when:
+    - nvidia_architecture_detected == "blackwell"
+    - gcc_installed.changed | default(false)
+
+- name: Set G++ 14 as default
+  alternatives:
+    name: g++
+    path: /usr/bin/g++-14
+    priority: 100
+  when:
+    - nvidia_architecture_detected == "blackwell"
+    - gcc_installed.changed | default(false)
+
+- name: Verify GCC version
+  command: gcc --version
+  register: gcc_version_check
+  changed_when: false
+
+- name: Display GCC version
+  debug:
+    msg: "GCC version: {{ gcc_version_check.stdout_lines[0] }}"

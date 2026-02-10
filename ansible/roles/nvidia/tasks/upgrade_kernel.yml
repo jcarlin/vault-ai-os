@@ -1,0 +1,33 @@
+---
+# ansible/roles/nvidia/tasks/upgrade_kernel.yml
+# Upgrade kernel for Blackwell architecture (RTX 50 series)
+
+- name: Check if kernel upgrade is needed
+  debug:
+    msg: "Kernel upgrade required for {{ nvidia_architecture_detected }} architecture"
+
+- name: Add Ubuntu Hardware Enablement (HWE) repository
+  apt_repository:
+    repo: "ppa:canonical-kernel-team/ppa"
+    state: present
+    update_cache: yes
+  when: kernel_minimum is version('6.13', '>=')
+
+- name: Install kernel 6.13+ for Blackwell
+  apt:
+    name:
+      - "{{ nvidia_kernel_package_blackwell }}"
+      - linux-headers-6.13.0-generic
+    state: present
+  when: nvidia_architecture_detected == "blackwell"
+  register: kernel_upgraded
+
+- name: Set reboot flag if kernel upgraded
+  set_fact:
+    nvidia_reboot_after_install: true
+  when: kernel_upgraded.changed | default(false)
+
+- name: Display kernel upgrade status
+  debug:
+    msg: "Kernel upgraded. Reboot required to load new kernel."
+  when: kernel_upgraded.changed | default(false)

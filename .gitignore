@@ -38,16 +38,21 @@ docs/
 *.box
 *.qcow2
 *.img
+*.iso
 .packer_cache/
 packer_cache/
+output/
 output-*/
 packer-manifest.json
+packer-manifest-*.json
 packer/manifest.json
 packer/packer_cache/
 packer/*.box
 packer/manifest.json
 packer/packer_cache/
 packer/output-*/
+packer/*.log
+build-logs/
 
 # Ansible artifacts
 *.retry
@@ -71,6 +76,18 @@ secrets/
 .env
 .env.local
 .env*.local
+
+# GCP credentials and config
+.gcp/
+*.json
+!packer/*.pkr.hcl
+!ansible/**/*.json
+!package.json
+gcp-vault-cube
+gcp-vault-cube.pub
+*-key.json
+service-account-*.json
+.config/gcloud/
 
 # Node.js (if applicable)
 node_modules/

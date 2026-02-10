@@ -1,0 +1,54 @@
+---
+# ansible/roles/nvidia/tasks/performance_tuning.yml
+# Performance tuning for NVIDIA GPUs
+
+- name: Enable persistence mode
+  command: nvidia-smi -pm 1
+  changed_when: false
+  failed_when: false
+  when: nvidia_persistence_mode | default(true)
+
+- name: Set power limit (if specified)
+  command: nvidia-smi -pl {{ nvidia_power_limit }}
+  changed_when: false
+  failed_when: false
+  when: nvidia_power_limit is defined and nvidia_power_limit != None
+
+- name: Query current GPU power draw
+  shell: nvidia-smi --query-gpu=index,power.draw,power.limit --format=csv
+  register: gpu_power
+  changed_when: false
+  failed_when: false
+
+- name: Display GPU power configuration
+  debug:
+    msg: "{{ gpu_power.stdout_lines }}"
+  when: gpu_power.rc == 0
+
+- name: Create nvidia-smi logging service
+  copy:
+    dest: /etc/systemd/system/nvidia-smi-log.service
+    content: |
+      [Unit]
+      Description=NVIDIA GPU Metrics Logging
+      After=multi-user.target
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/bin/nvidia-smi dmon -s pucvmet -d 5 -o TD > /var/log/nvidia-smi.log
+      Restart=always
+      RestartSec=10
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
+  register: nvidia_logging_service
+
+- name: Enable and start nvidia-smi logging service
+  systemd:
+    name: nvidia-smi-log
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  when: nvidia_logging_service.changed
+  failed_when: false

@@ -1,0 +1,40 @@
+---
+# ansible/roles/nvidia/tasks/install_cuda.yml
+# Install CUDA Toolkit
+
+- name: Install CUDA Toolkit
+  apt:
+    name:
+      - cuda-toolkit-{{ cuda_version | replace('.', '-') }}
+      - cuda-drivers-{{ nvidia_driver_version_selected }}
+    state: present
+  register: cuda_installed
+
+- name: Add CUDA to PATH
+  lineinfile:
+    path: /etc/environment
+    regexp: '^PATH='
+    line: 'PATH="/usr/local/cuda-{{ cuda_version }}/bin:{{ ansible_env.PATH }}"'
+    create: yes
+
+- name: Add CUDA library path to ld.so.conf
+  lineinfile:
+    path: /etc/ld.so.conf.d/cuda.conf
+    line: "/usr/local/cuda-{{ cuda_version }}/lib64"
+    create: yes
+  register: ldconfig_updated
+
+- name: Run ldconfig to update library cache
+  command: ldconfig
+  when: ldconfig_updated.changed
+
+- name: Verify CUDA installation
+  shell: /usr/local/cuda-{{ cuda_version }}/bin/nvcc --version
+  register: cuda_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Display CUDA version
+  debug:
+    msg: "{{ cuda_version_check.stdout_lines }}"
+  when: cuda_version_check.rc == 0

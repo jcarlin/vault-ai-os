@@ -1,0 +1,68 @@
+---
+# ansible/roles/nvidia/defaults/main.yml
+# Default variables for NVIDIA driver installation
+
+# GPU Architecture Detection
+# Options: auto, ada-lovelace (RTX 40), blackwell (RTX 50), ampere (A100/H100)
+nvidia_gpu_architecture: "auto"
+
+# Driver Versions by Architecture
+nvidia_driver_version_ampere: "535"        # A100, H100
+nvidia_driver_version_ada: "535"           # RTX 4090, RTX 4080
+nvidia_driver_version_blackwell: "570"     # RTX 5090, RTX 5080
+
+# Driver Type
+# Options: proprietary, open
+# NOTE: RTX 50 series (Blackwell) REQUIRES open-source modules
+nvidia_driver_type: "proprietary"
+
+# CUDA Toolkit Version
+cuda_version: "12.8"
+cuda_version_full: "12.8.0"
+
+# cuDNN Version
+cudnn_version: "9.7.1"
+cudnn_version_full: "9.7.1"
+
+# Kernel Requirements
+kernel_version_minimum_ampere: "6.5"
+kernel_version_minimum_ada: "6.5"
+kernel_version_minimum_blackwell: "6.13"
+
+# GCC Requirements
+gcc_version_minimum_ampere: "12"
+gcc_version_minimum_ada: "12"
+gcc_version_minimum_blackwell: "14"
+
+# Installation Options
+nvidia_install_cuda: true
+nvidia_install_cudnn: true
+nvidia_enable_persistence_mode: true
+
+# Reboot Options
+nvidia_reboot_after_install: true
+nvidia_reboot_timeout: 300  # seconds
+
+# APT Repository URLs
+# Updated for Ubuntu 24.04 and CUDA 12.8
+nvidia_cuda_repo_url: "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64"
+nvidia_cuda_repo_key_url: "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/3bf863cc.pub"
+
+# Package Names (auto-constructed based on versions)
+nvidia_driver_package_proprietary: "nvidia-driver-{{ nvidia_driver_version_selected }}"
+nvidia_driver_package_open: "nvidia-driver-{{ nvidia_driver_version_selected }}-server-open"
+
+# Kernel Package (for Blackwell architecture)
+nvidia_kernel_package_blackwell: "linux-image-6.13.0-generic"
+
+# GCC Package (for Blackwell architecture)
+nvidia_gcc_package_blackwell: "gcc-14"
+nvidia_gxx_package_blackwell: "g++-14"
+
+# Validation
+nvidia_validate_after_install: true
+nvidia_expected_gpu_count: 2  # Adjust based on your hardware
+
+# Performance Tuning
+nvidia_persistence_mode: true
+nvidia_power_limit: null  # Set to integer (watts) if you want to limit power

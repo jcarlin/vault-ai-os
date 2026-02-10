@@ -1,0 +1,58 @@
+---
+# ansible/roles/nvidia-container-toolkit/tasks/main.yml
+
+- name: Add NVIDIA Container Toolkit repository GPG key
+  apt_key:
+    url: https://nvidia.github.io/nvidia-docker/gpgkey
+    state: present
+
+- name: Get distribution
+  shell: . /etc/os-release;echo $ID$VERSION_ID
+  register: distribution
+  changed_when: false
+
+- name: Add NVIDIA Container Toolkit repository
+  apt_repository:
+    repo: "deb https://nvidia.github.io/nvidia-docker/{{ distribution.stdout }}/$(ARCH) /"
+    state: present
+    filename: nvidia-docker
+    update_cache: yes
+
+- name: Install NVIDIA Container Toolkit
+  apt:
+    name: nvidia-container-toolkit
+    state: present
+  register: nvidia_container_toolkit_installed
+
+- name: Configure Docker daemon for NVIDIA runtime
+  copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "runtimes": {
+          "nvidia": {
+            "path": "nvidia-container-runtime",
+            "runtimeArgs": []
+          }
+        },
+        "default-runtime": "nvidia"
+      }
+    mode: '0644'
+  register: docker_daemon_config
+
+- name: Restart Docker service
+  systemd:
+    name: docker
+    state: restarted
+  when: docker_daemon_config.changed
+
+- name: Test Docker GPU access
+  shell: docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
+  register: docker_gpu_test
+  changed_when: false
+  failed_when: false
+
+- name: Display Docker GPU test result
+  debug:
+    msg: "{{ docker_gpu_test.stdout_lines }}"
+  when: docker_gpu_test.rc == 0
