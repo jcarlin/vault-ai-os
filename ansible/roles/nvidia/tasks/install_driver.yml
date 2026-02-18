@@ -1,0 +1,77 @@
+---
+# ansible/roles/nvidia/tasks/install_driver.yml
+# Install NVIDIA GPU drivers
+
+- name: Update APT cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install kernel headers and build tools
+  apt:
+    name:
+      - linux-headers-{{ ansible_kernel }}
+      - build-essential
+      - dkms
+    state: present
+
+- name: Add NVIDIA CUDA repository GPG key
+  apt_key:
+    url: "{{ nvidia_cuda_repo_key_url }}"
+    state: present
+
+- name: Add NVIDIA CUDA repository
+  apt_repository:
+    repo: "deb {{ nvidia_cuda_repo_url }} /"
+    state: present
+    filename: cuda
+    update_cache: yes
+
+- name: Set driver package name (proprietary)
+  set_fact:
+    nvidia_driver_package: "nvidia-driver-{{ nvidia_driver_version_selected }}"
+  when: nvidia_driver_type_selected == "proprietary"
+
+- name: Set driver package name (open-source)
+  set_fact:
+    nvidia_driver_package: "nvidia-driver-{{ nvidia_driver_version_selected }}-server-open"
+  when: nvidia_driver_type_selected == "open"
+
+- name: Display driver package to install
+  debug:
+    msg: "Installing driver package: {{ nvidia_driver_package }}"
+
+- name: Check if NVIDIA driver is already installed
+  shell: dpkg -l | grep "{{ nvidia_driver_package }}" | wc -l
+  register: nvidia_driver_check
+  changed_when: false
+
+- name: Install NVIDIA driver
+  apt:
+    name:
+      - "{{ nvidia_driver_package }}"
+      - nvidia-utils-{{ nvidia_driver_version_selected }}
+      - nvidia-settings
+    state: present
+  register: nvidia_driver_installed
+  when: nvidia_driver_check.stdout == "0"
+
+- name: Display installation result
+  debug:
+    msg: "NVIDIA driver installed successfully"
+  when: nvidia_driver_installed.changed | default(false)
+
+- name: Load NVIDIA kernel modules
+  modprobe:
+    name: nvidia
+    state: present
+  failed_when: false
+  when: not (nvidia_reboot_after_install | default(true))
+
+- name: Enable nvidia-persistenced service
+  systemd:
+    name: nvidia-persistenced
+    enabled: yes
+    state: started
+  when: nvidia_enable_persistence_mode | default(true)
+  failed_when: false  # Service may not exist until after reboot

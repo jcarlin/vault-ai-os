@@ -27,6 +27,36 @@
     name: "{{ network_packages }}"
     state: present
 
+- name: Install hardware diagnostic packages
+  apt:
+    name: "{{ hardware_packages }}"
+    state: present
+
+- name: Install disk management packages
+  apt:
+    name: "{{ disk_packages }}"
+    state: present
+
+- name: Install shell productivity packages
+  apt:
+    name: "{{ shell_packages }}"
+    state: present
+
+- name: Install archive packages
+  apt:
+    name: "{{ archive_packages }}"
+    state: present
+
+- name: Install network diagnostic packages
+  apt:
+    name: "{{ network_diagnostic_packages }}"
+    state: present
+
+- name: Install system utility packages
+  apt:
+    name: "{{ system_packages }}"
+    state: present
+
 - name: Clean up apt cache
   apt:
     autoclean: yes

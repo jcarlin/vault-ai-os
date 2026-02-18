@@ -40,11 +40,17 @@
 
 - name: Install Ubuntu HWE kernel for AMD Threadripper PRO 7975WX support
   apt:
-    name: linux-generic-hwe-22.04
+    name: "linux-generic-hwe-{{ ansible_distribution_version }}"
     state: present
+  when:
+    - ansible_distribution_version == "22.04"
+    - not (packer_build | default(false))
   tags:
     - kernel
     - hwe
+
+# Note: Ubuntu 24.04 ships with kernel 6.8 and doesn't need HWE kernel by default.
+# For RTX 5090 support, kernel 6.13+ is installed by the nvidia role during GPU setup.
 
 - name: Configure system locale
   locale_gen:

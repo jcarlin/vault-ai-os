@@ -1,0 +1,17 @@
+---
+# ansible/roles/vllm/tasks/main.yml
+
+- name: Install vLLM
+  pip:
+    name: vllm
+    executable: pip3.12
+  register: vllm_installed
+
+- name: Verify vLLM installation
+  shell: python3.12 -c "from vllm import LLM; print('vLLM installed successfully')"
+  register: vllm_check
+  changed_when: false
+
+- name: Display vLLM installation status
+  debug:
+    msg: "{{ vllm_check.stdout }}"

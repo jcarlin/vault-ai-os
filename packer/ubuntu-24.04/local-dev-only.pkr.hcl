@@ -1,6 +1,6 @@
-# Packer template for Ubuntu 22.04 LTS Demo Box
+# Packer template for Ubuntu 24.04 LTS - Local VirtualBox Development Only
 # Vault AI Systems - Cube Golden Image
-# TODO: update the iso_url to "https://releases.ubuntu.com/22.04.5/ubuntu-22.04.5-live-server-amd64.iso"
+# NO GPU components - Base system validation only
 
 # Required Packer version
 packer {
@@ -20,19 +20,18 @@ packer {
 # Variables
 variable "iso_url" {
   type    = string
-  default = "/Users/julian/Downloads/ubuntu-22.04.5-live-server-amd64.iso"
+  default = "/Users/julian/Downloads/ubuntu-24.04.3-live-server-amd64.iso"
 }
 
 variable "iso_checksum" {
-  type    = string
-  # SHA256 checksum for ubuntu-22.04.5-live-server-amd64.iso
-  # Verified checksum: 9bc6028870aef3f74f4e16b900008179e78b130e6b0b9a140635434a46aa98b0
-  default = "sha256:9bc6028870aef3f74f4e16b900008179e78b130e6b0b9a140635434a46aa98b0"
+  type = string
+  # SHA256 checksum for ubuntu-24.04.3-live-server-amd64.iso
+  default = "sha256:c3514bf0056180d09376462a7a1b4f213c1d6e8ea67fae5c25099c6fd3d8274b"
 }
 
 variable "vm_name" {
   type    = string
-  default = "vault-cube-demo-box"
+  default = "vault-cube-demo-box-2404"
 }
 
 variable "cpus" {
@@ -56,13 +55,13 @@ variable "ssh_username" {
 }
 
 variable "ssh_password" {
-  type    = string
-  default = "vaultadmin"
+  type      = string
+  default   = "vaultadmin"
   sensitive = true
 }
 
 # VirtualBox ISO builder
-source "virtualbox-iso" "ubuntu-2204" {
+source "virtualbox-iso" "ubuntu-2404" {
   # VM configuration
   vm_name              = var.vm_name
   guest_os_type        = "Ubuntu_64"
@@ -71,51 +70,45 @@ source "virtualbox-iso" "ubuntu-2204" {
   disk_size            = var.disk_size
   hard_drive_interface = "sata"
 
-  # VISIBILITY: Show VirtualBox GUI so you can see what's happening!
-  headless             = false
+  # VISIBILITY: Show VirtualBox GUI
+  headless = false
 
   # ISO configuration
   iso_url      = var.iso_url
   iso_checksum = var.iso_checksum
 
   # Network configuration
-  # NAT allows internet access during build
-  # We'll add host-only adapter later for Ansible
   guest_additions_mode = "disable"
 
   # HTTP server for serving cloud-init files
-  # Packer starts a web server to serve files from http directory
-  http_directory = "http"
+  http_directory = "../http"
 
-  # Boot configuration for Ubuntu 22.04
-  # Ubuntu 22.04 uses GRUB menu, so we navigate to the boot entry and modify it
-  # The autoinstall parameter tells Ubuntu to use automated installation
-  # ds=nocloud-net points to our HTTP server for cloud-init configuration
-  boot_wait = "5s"
+  # Boot configuration for Ubuntu 24.04
+  # Adjusted timing for 24.04's different GRUB sequence
+  boot_wait = "10s"
   boot_command = [
-    # Wait for GRUB menu to appear
+    # Wait for GRUB menu to fully render
+    "<wait5>",
+    # Press 'e' to edit boot entry
+    "e",
+    "<wait3>",
+    # Navigate to linux line - Ubuntu 24.04 may need different navigation
+    "<down><down><down><end>",
     "<wait>",
-    # Press 'e' to edit the default boot entry
-    "e<wait>",
-    # Navigate down to the linux line (typically 3 down arrows)
-    "<down><down><down>",
-    # Go to end of line
-    "<end>",
-    # Add autoinstall and cloud-init data source parameters
+    # Add autoinstall parameters
     " autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/",
-    # Ctrl+X or F10 to boot with modified parameters
+    "<wait>",
+    # Boot with F10
     "<f10>"
   ]
 
-  # SSH configuration - ENHANCED for reliability with password auth
-  # After installation completes, Packer connects via SSH to provision
-  # Increased timeouts to 60m and handshake attempts to 200 for maximum reliability
+  # SSH configuration
   ssh_username           = var.ssh_username
   ssh_password           = var.ssh_password
-  ssh_timeout            = "60m"  # Increased to 60m for maximum reliability
-  ssh_handshake_attempts = 200    # Increased to 200 for better reliability
+  ssh_timeout            = "60m"
+  ssh_handshake_attempts = 420
   ssh_pty                = true
-  ssh_wait_timeout       = "60m"  # Match ssh_timeout for consistent behavior
+  ssh_wait_timeout       = "60m"
 
   # Shutdown configuration
   shutdown_command = "echo '${var.ssh_password}' | sudo -S shutdown -P now"
@@ -126,24 +119,26 @@ source "virtualbox-iso" "ubuntu-2204" {
 
   # VirtualBox specific settings
   vboxmanage = [
-    # Explicit NAT configuration for first adapter
     ["modifyvm", "{{.Name}}", "--nic1", "nat"],
     ["modifyvm", "{{.Name}}", "--nat-localhostreachable1", "on"],
-    # Note: Packer creates its own SSH port forwarding dynamically
-    # Disable unnecessary hardware
     ["modifyvm", "{{.Name}}", "--audio", "none"],
     ["modifyvm", "{{.Name}}", "--usb", "on"],
-    # VISIBILITY: Enable serial console logging (must be before boot, not in vboxmanage_post)
+    # Serial console logging for debugging installation
     ["modifyvm", "{{.Name}}", "--uart1", "0x3F8", "4"],
-    ["modifyvm", "{{.Name}}", "--uartmode1", "file", "vault-cube-demo-box-console.log"]
+    ["modifyvm", "{{.Name}}", "--uartmode1", "file", "vault-cube-2404-console.log"]
+  ]
+
+  # Add permanent SSH port forwarding (saved in OVA)
+  vboxmanage_post = [
+    ["modifyvm", "{{.Name}}", "--natpf1", "ssh,tcp,,2222,,22"]
   ]
 }
 
 # Build configuration
 build {
-  sources = ["source.virtualbox-iso.ubuntu-2204"]
+  sources = ["source.virtualbox-iso.ubuntu-2404"]
 
-  # FIRST PROVISIONER: Verify SSH connection and user setup
+  # Verify SSH connection
   provisioner "shell" {
     inline = [
       "echo '=============================================='",
@@ -154,6 +149,11 @@ build {
       "echo 'Groups: $(groups)'",
       "echo 'Home directory: $HOME'",
       "echo 'Shell: $SHELL'",
+      "echo ''",
+      "echo 'OS Version:'",
+      "cat /etc/os-release | grep PRETTY_NAME",
+      "echo 'Kernel Version:'",
+      "uname -r",
       "echo ''",
       "echo 'Testing sudo access...'",
       "sudo -n whoami && echo 'Sudo access: WORKING' || echo 'Sudo access: FAILED'",
@@ -166,7 +166,7 @@ build {
     ]
   }
 
-  # Wait for cloud-init to complete and network to be ready
+  # Wait for cloud-init to complete
   provisioner "shell" {
     inline = [
       "echo 'Waiting for cloud-init to complete...'",
@@ -189,7 +189,7 @@ build {
     ]
   }
 
-  # Install Ansible (required for ansible-local provisioner)
+  # Install Ansible
   provisioner "shell" {
     inline = [
       "echo 'Installing Ansible...'",
@@ -202,22 +202,40 @@ build {
     ]
   }
 
-  # Ansible provisioning - Base system configuration
+  # Ansible provisioning - Base system configuration (NO GPU)
   provisioner "ansible-local" {
-    playbook_file     = "../ansible/playbooks/site.yml"
+    playbook_file = "../../ansible/playbooks/site.yml"
     role_paths = [
-      "../ansible/roles/common",
-      "../ansible/roles/users",
-      # "../ansible/roles/security",
-      "../ansible/roles/packages",
-      "../ansible/roles/networking",
-      "../ansible/roles/docker",
-      "../ansible/roles/python"
+      "../../ansible/roles/common",
+      "../../ansible/roles/users",
+      "../../ansible/roles/packages",
+      "../../ansible/roles/networking",
+      "../../ansible/roles/docker",
+      "../../ansible/roles/python"
     ]
     staging_directory = "/tmp/ansible"
     extra_arguments = [
-      "--extra-vars={\"ansible_python_interpreter\":\"/usr/bin/python3\",\"packer_build\":true}",
+      "--extra-vars={\"ansible_python_interpreter\":\"/usr/bin/python3\",\"packer_build\":true,\"ubuntu_version\":\"24.04\"}",
       "--skip-tags=security,hardening,ai-runtime"
+    ]
+  }
+
+  # Verify kernel version
+  provisioner "shell" {
+    inline = [
+      "echo '=============================================='",
+      "echo '=== Kernel Version Check ==='",
+      "KERNEL_VERSION=$(uname -r)",
+      "echo \"Kernel: $KERNEL_VERSION\"",
+      "if [[ \"$KERNEL_VERSION\" == 6.13.* ]] || [[ \"$KERNEL_VERSION\" > \"6.13\" ]]; then",
+      "  echo '✓ Kernel 6.13+ confirmed (RTX 5090 ready)'",
+      "elif [[ \"$KERNEL_VERSION\" == 6.8.* ]]; then",
+      "  echo '⚠ Kernel 6.8 detected (default Ubuntu 24.04)'",
+      "  echo '  NOTE: Kernel 6.13+ would be installed by nvidia role for RTX 5090'",
+      "else",
+      "  echo \"Kernel: $KERNEL_VERSION\"",
+      "fi",
+      "echo '=============================================='",
     ]
   }
 
@@ -234,6 +252,7 @@ build {
   }
 
   post-processor "manifest" {
-    output = "manifest.json"
+    output     = "packer-manifest-local-2404.json"
+    strip_path = true
   }
 }

@@ -1,0 +1,46 @@
+---
+# ansible/inventory/production.yml
+# Inventory for physical Vault Cube hardware (4x RTX 5090)
+
+all:
+  hosts:
+    vault-cube-01:
+      # REPLACE WITH YOUR PHYSICAL HARDWARE DETAILS
+      ansible_host: 192.168.1.100       # Your Vault Cube IP
+      ansible_port: 22
+      ansible_user: vaultadmin
+      ansible_become: yes
+      ansible_become_method: sudo
+      ansible_python_interpreter: /usr/bin/python3.12
+
+      # GPU Configuration (RTX 5090)
+      nvidia_expected_gpu_count: 4
+      nvidia_gpu_architecture: "blackwell"  # RTX 50 series
+
+      # Driver Configuration (Blackwell requirements)
+      nvidia_driver_version_blackwell: "570"
+      nvidia_driver_type: "open"  # REQUIRED for RTX 50 series
+      cuda_version: "12.4"
+
+      # Kernel and GCC requirements
+      kernel_version_minimum_blackwell: "6.13"
+      gcc_version_minimum_blackwell: "14"
+
+      # Performance settings
+      nvidia_persistence_mode: true
+      nvidia_power_limit: null  # Set to 575 if you want to limit RTX 5090 power
+
+  children:
+    gpu_servers:
+      hosts:
+        vault-cube-01:
+
+# Multi-host example (if you have multiple Vault Cubes):
+#
+# vault-cube-02:
+#   ansible_host: 192.168.1.101
+#   # ... same configuration as above
+#
+# vault-cube-03:
+#   ansible_host: 192.168.1.102
+#   # ... same configuration as above

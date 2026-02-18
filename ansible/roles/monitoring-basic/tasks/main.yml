@@ -1,0 +1,19 @@
+---
+# ansible/roles/monitoring-basic/tasks/main.yml
+
+- name: Install monitoring packages
+  apt:
+    name:
+      - htop
+      - iotop
+      - nvtop
+      - sysstat
+      - lm-sensors
+    state: present
+    update_cache: yes
+
+- name: Enable sysstat service
+  systemd:
+    name: sysstat
+    enabled: yes
+    state: started

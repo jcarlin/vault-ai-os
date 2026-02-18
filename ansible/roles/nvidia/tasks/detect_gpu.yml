@@ -1,0 +1,116 @@
+---
+# ansible/roles/nvidia/tasks/detect_gpu.yml
+# Auto-detect GPU architecture and set driver version
+
+- name: Check if lspci is installed
+  command: which lspci
+  register: lspci_check
+  changed_when: false
+  failed_when: false
+
+- name: Install pciutils (for lspci)
+  apt:
+    name: pciutils
+    state: present
+    update_cache: yes
+  when: lspci_check.rc != 0
+
+- name: Detect NVIDIA GPUs
+  shell: lspci | grep -i "VGA.*NVIDIA" || lspci | grep -i "3D.*NVIDIA"
+  register: gpu_detection
+  changed_when: false
+  failed_when: false
+
+- name: Display detected GPUs
+  debug:
+    msg: "Detected GPUs: {{ gpu_detection.stdout_lines }}"
+  when: gpu_detection.stdout_lines | length > 0
+
+- name: Fail if no NVIDIA GPUs detected
+  fail:
+    msg: "No NVIDIA GPUs detected. Please verify hardware installation."
+  when: gpu_detection.stdout_lines | length == 0
+
+- name: Detect GPU architecture (Auto-detection)
+  set_fact:
+    nvidia_architecture_detected: >-
+      {%- if '5090' in gpu_detection.stdout or '5080' in gpu_detection.stdout -%}
+        blackwell
+      {%- elif '4090' in gpu_detection.stdout or '4080' in gpu_detection.stdout -%}
+        ada-lovelace
+      {%- elif 'A100' in gpu_detection.stdout or 'H100' in gpu_detection.stdout -%}
+        ampere
+      {%- else -%}
+        unknown
+      {%- endif -%}
+  when: nvidia_gpu_architecture == "auto"
+
+- name: Use manual architecture override
+  set_fact:
+    nvidia_architecture_detected: "{{ nvidia_gpu_architecture }}"
+  when: nvidia_gpu_architecture != "auto"
+
+- name: Display detected architecture
+  debug:
+    msg: "GPU Architecture: {{ nvidia_architecture_detected }}"
+
+- name: Set driver version based on architecture (Ampere - A100/H100)
+  set_fact:
+    nvidia_driver_version_selected: "{{ nvidia_driver_version_ampere }}"
+    nvidia_driver_type_selected: "proprietary"
+    kernel_minimum: "{{ kernel_version_minimum_ampere }}"
+    gcc_minimum: "{{ gcc_version_minimum_ampere }}"
+    nvidia_needs_kernel_upgrade: false
+    nvidia_needs_gcc_upgrade: false
+  when: nvidia_architecture_detected == "ampere"
+
+- name: Set driver version based on architecture (Ada Lovelace - RTX 40)
+  set_fact:
+    nvidia_driver_version_selected: "{{ nvidia_driver_version_ada }}"
+    nvidia_driver_type_selected: "proprietary"
+    kernel_minimum: "{{ kernel_version_minimum_ada }}"
+    gcc_minimum: "{{ gcc_version_minimum_ada }}"
+    nvidia_needs_kernel_upgrade: false
+    nvidia_needs_gcc_upgrade: false
+  when: nvidia_architecture_detected == "ada-lovelace"
+
+- name: Set driver version based on architecture (Blackwell - RTX 50)
+  set_fact:
+    nvidia_driver_version_selected: "{{ nvidia_driver_version_blackwell }}"
+    nvidia_driver_type_selected: "open"  # REQUIRED for RTX 50
+    kernel_minimum: "{{ kernel_version_minimum_blackwell }}"
+    gcc_minimum: "{{ gcc_version_minimum_blackwell }}"
+    nvidia_needs_kernel_upgrade: true
+    nvidia_needs_gcc_upgrade: true
+  when: nvidia_architecture_detected == "blackwell"
+
+- name: Fail if unknown architecture
+  fail:
+    msg: "Unknown GPU architecture detected. Set nvidia_gpu_architecture manually."
+  when: nvidia_architecture_detected == "unknown"
+
+- name: Display driver configuration
+  debug:
+    msg:
+      - "Driver Version: {{ nvidia_driver_version_selected }}"
+      - "Driver Type: {{ nvidia_driver_type_selected }}"
+      - "Kernel Minimum: {{ kernel_minimum }}"
+      - "GCC Minimum: {{ gcc_minimum }}"
+
+- name: Check current kernel version
+  command: uname -r
+  register: current_kernel
+  changed_when: false
+
+- name: Display current kernel version
+  debug:
+    msg: "Current kernel: {{ current_kernel.stdout }}"
+
+- name: Check current GCC version
+  shell: gcc --version | head -1 | grep -oP '\d+\.\d+\.\d+' || echo "not installed"
+  register: current_gcc
+  changed_when: false
+
+- name: Display current GCC version
+  debug:
+    msg: "Current GCC: {{ current_gcc.stdout }}"

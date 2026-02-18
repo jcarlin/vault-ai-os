@@ -1,0 +1,14 @@
+---
+# ansible/roles/tensorflow/defaults/main.yml
+
+tensorflow_version: "2.17.0"
+
+# Installation Method
+# Options: ngc_container (recommended), pip
+# NGC container includes CUDA 12.8 + TensorFlow 2.17 optimized for RTX 5090
+# Pip installation requires CUDA 12.3 (incompatible with CUDA 12.8)
+tensorflow_install_method: "ngc_container"
+tensorflow_ngc_image: "nvcr.io/nvidia/tensorflow:25.02-tf2-py3"
+
+# Pip installation alternative (requires CUDA 12.3 downgrade)
+tensorflow_pip_requires_cuda: "12.3"
