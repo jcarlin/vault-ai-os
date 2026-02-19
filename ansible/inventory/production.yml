@@ -20,7 +20,7 @@ all:
       # Driver Configuration (Blackwell requirements)
       nvidia_driver_version_blackwell: "570"
       nvidia_driver_type: "open"  # REQUIRED for RTX 50 series
-      cuda_version: "12.4"
+      cuda_version: "12.8"  # CUDA 12.8 required for native Blackwell sm_120 support
 
       # Kernel and GCC requirements
       kernel_version_minimum_blackwell: "6.13"

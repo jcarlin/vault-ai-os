@@ -34,7 +34,7 @@
 - name: Detect GPU architecture (Auto-detection)
   set_fact:
     nvidia_architecture_detected: >-
-      {%- if '5090' in gpu_detection.stdout or '5080' in gpu_detection.stdout -%}
+      {%- if '5090' in gpu_detection.stdout or '5080' in gpu_detection.stdout or 'RTX PRO 6000' in gpu_detection.stdout -%}
         blackwell
       {%- elif '4090' in gpu_detection.stdout or '4080' in gpu_detection.stdout -%}
         ada-lovelace
