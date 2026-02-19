@@ -1,14 +1,26 @@
 ---
 # ansible/roles/tensorflow/defaults/main.yml
-
-tensorflow_version: "2.17.0"
+#
+# TensorFlow Blackwell (RTX 5090) Compatibility — Feb 2026:
+#   - NO official TensorFlow pip release supports Blackwell / sm_120
+#   - TF 2.19 pip does NOT include sm_120 kernels; PTX JIT fails with CUDA_ERROR_INVALID_PTX
+#   - The ONLY reliable path is NVIDIA's NGC container
+#   - Community fork exists (TF 2.19.1.1 by Samuel Andersen) but is unofficial
 
 # Installation Method
 # Options: ngc_container (recommended), pip
-# NGC container includes CUDA 12.8 + TensorFlow 2.17 optimized for RTX 5090
-# Pip installation requires CUDA 12.3 (incompatible with CUDA 12.8)
+# WARNING: pip installation does NOT work on RTX 5090 (Blackwell).
+#   TensorFlow pip packages lack sm_120 kernel binaries. JIT compilation from PTX
+#   takes 30+ minutes and typically fails. Use ngc_container instead.
 tensorflow_install_method: "ngc_container"
-tensorflow_ngc_image: "nvcr.io/nvidia/tensorflow:25.02-tf2-py3"
 
-# Pip installation alternative (requires CUDA 12.3 downgrade)
+# NGC Container — recommended for RTX 5090
+# The NGC container bundles CUDA 12.8, cuDNN, and a TensorFlow build optimized
+# for Blackwell GPUs. The container manages its own TF version internally.
+tensorflow_ngc_image: "nvcr.io/nvidia/tensorflow:25.02-tf2-py3"
+tensorflow_ngc_container_name: "tensorflow-gpu"
+
+# Pip installation (NOT supported on Blackwell/RTX 5090)
+# Only use for non-Blackwell GPUs (Ada Lovelace, Ampere)
+tensorflow_version: "2.17.0"
 tensorflow_pip_requires_cuda: "12.3"

@@ -1,33 +1,71 @@
 ---
 # ansible/roles/nvidia/tasks/upgrade_kernel.yml
 # Upgrade kernel for Blackwell architecture (RTX 50 series)
+#
+# Ubuntu 24.04 ships with kernel 6.8. Blackwell (RTX 5090) requires 6.13+.
+# Strategy: Try Ubuntu HWE edge kernel first, then canonical-kernel-team PPA.
 
 - name: Check if kernel upgrade is needed
   debug:
-    msg: "Kernel upgrade required for {{ nvidia_architecture_detected }} architecture"
+    msg: "Kernel upgrade required for {{ nvidia_architecture_detected }} architecture (need {{ kernel_minimum }}+, have {{ current_kernel.stdout }})"
 
-- name: Add Ubuntu Hardware Enablement (HWE) repository
-  apt_repository:
-    repo: "ppa:canonical-kernel-team/ppa"
-    state: present
-    update_cache: yes
-  when: kernel_minimum is version('6.13', '>=')
-
-- name: Install kernel 6.13+ for Blackwell
-  apt:
-    name:
-      - "{{ nvidia_kernel_package_blackwell }}"
-      - linux-headers-6.13.0-generic
-    state: present
-  when: nvidia_architecture_detected == "blackwell"
-  register: kernel_upgraded
-
-- name: Set reboot flag if kernel upgraded
+- name: Check if current kernel already meets minimum
   set_fact:
-    nvidia_reboot_after_install: true
-  when: kernel_upgraded.changed | default(false)
+    kernel_upgrade_needed: "{{ current_kernel.stdout.split('-')[0] is version(kernel_minimum, '<') }}"
 
-- name: Display kernel upgrade status
+- name: Skip kernel upgrade if already sufficient
   debug:
-    msg: "Kernel upgraded. Reboot required to load new kernel."
-  when: kernel_upgraded.changed | default(false)
+    msg: "Current kernel {{ current_kernel.stdout }} already meets minimum {{ kernel_minimum }}. Skipping upgrade."
+  when: not kernel_upgrade_needed
+
+- name: Upgrade kernel for Blackwell
+  block:
+    - name: Try installing HWE edge kernel
+      apt:
+        name:
+          - linux-generic-hwe-24.04-edge
+        state: present
+        update_cache: yes
+      register: hwe_kernel_result
+      failed_when: false
+
+    - name: Add canonical-kernel-team PPA (fallback)
+      apt_repository:
+        repo: "ppa:canonical-kernel-team/ppa"
+        state: present
+        update_cache: yes
+      when: hwe_kernel_result.rc is defined and hwe_kernel_result.rc != 0
+
+    - name: Install specific kernel package (fallback)
+      apt:
+        name:
+          - "{{ nvidia_kernel_package_blackwell }}"
+          - "linux-headers-6.13.0-generic"
+        state: present
+      register: ppa_kernel_result
+      when: hwe_kernel_result.rc is defined and hwe_kernel_result.rc != 0
+      failed_when: false
+
+    - name: Set kernel upgrade result
+      set_fact:
+        kernel_upgraded:
+          changed: "{{ (hwe_kernel_result.changed | default(false)) or (ppa_kernel_result.changed | default(false)) }}"
+
+    - name: Set reboot flag if kernel upgraded
+      set_fact:
+        nvidia_reboot_after_install: true
+      when: kernel_upgraded.changed | default(false)
+
+    - name: Display kernel upgrade status
+      debug:
+        msg: "Kernel upgraded. Reboot required to load new kernel."
+      when: kernel_upgraded.changed | default(false)
+
+    - name: Warn if kernel upgrade failed
+      debug:
+        msg: >
+          WARNING: Could not install kernel {{ kernel_minimum }}+.
+          Blackwell GPUs require kernel 6.13+. You may need to install manually
+          using Ubuntu mainline kernel packages or update your Ubuntu release.
+      when: not (kernel_upgraded.changed | default(false))
+  when: kernel_upgrade_needed

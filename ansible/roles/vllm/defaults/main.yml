@@ -1,0 +1,33 @@
+---
+# ansible/roles/vllm/defaults/main.yml
+#
+# vLLM Blackwell (RTX 5090) Compatibility — Feb 2026:
+#   - Precompiled pip wheels do NOT include sm_120 kernels (silent runtime failure)
+#   - Must use NGC container or build from source
+#   - Flash Attention 3 does NOT work on Blackwell — must force FA2
+#   - vLLM tensor parallelism (TP=2) is BROKEN on dual RTX 5090 as of Feb 2026
+#   - For multi-GPU inference, use Ollama (layer splitting) or DeepSpeed instead
+
+# Installation Method
+# Options: ngc_container (recommended), source, pip (broken on Blackwell)
+# WARNING: pip installation does NOT work on RTX 5090 (Blackwell).
+vllm_install_method: "ngc_container"
+
+# NGC Container — recommended for RTX 5090
+# NVIDIA's official vLLM container with Blackwell functional support
+vllm_ngc_image: "nvcr.io/nvidia/vllm:25.09"
+vllm_ngc_container_name: "vllm-server"
+
+# vLLM environment variables (required for Blackwell)
+# Flash Attention 3 is broken on Blackwell; force v2
+vllm_flash_attn_version: "2"
+# CUDA architecture for custom extension compilation
+vllm_cuda_arch_list: "12.0"
+
+# vLLM server defaults (for NGC container)
+vllm_default_port: 8000
+vllm_default_model: ""  # Set to a model name to auto-start serving
+
+# Source build settings (alternative to NGC container)
+vllm_source_repo: "https://github.com/vllm-project/vllm.git"
+vllm_source_branch: "main"

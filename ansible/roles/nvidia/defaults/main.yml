@@ -1,6 +1,11 @@
 ---
 # ansible/roles/nvidia/defaults/main.yml
 # Default variables for NVIDIA driver installation
+#
+# Compatibility Matrix (researched Feb 2026):
+#   RTX 5090 (Blackwell, sm_120): Driver 570+, CUDA 12.8+, Kernel 6.13+, GCC 14
+#   RTX 4090 (Ada Lovelace, sm_89): Driver 535+, CUDA 12.x, Kernel 6.5+
+#   A100/H100 (Ampere, sm_80/90): Driver 535+, CUDA 12.x, Kernel 6.5+
 
 # GPU Architecture Detection
 # Options: auto, ada-lovelace (RTX 40), blackwell (RTX 50), ampere (A100/H100)
@@ -9,18 +14,23 @@ nvidia_gpu_architecture: "auto"
 # Driver Versions by Architecture
 nvidia_driver_version_ampere: "535"        # A100, H100
 nvidia_driver_version_ada: "535"           # RTX 4090, RTX 4080
-nvidia_driver_version_blackwell: "570"     # RTX 5090, RTX 5080
+nvidia_driver_version_blackwell: "570"     # RTX 5090, RTX 5080 — minimum 570.26+
 
 # Driver Type
 # Options: proprietary, open
-# NOTE: RTX 50 series (Blackwell) REQUIRES open-source modules
-nvidia_driver_type: "proprietary"
+# NOTE: RTX 50 series (Blackwell) REQUIRES nvidia-open kernel modules.
+#   Proprietary modules do NOT detect RTX 5090 ("No devices were found").
+#   Auto-detection in detect_gpu.yml overrides this to "open" for Blackwell.
+nvidia_driver_type: "open"
 
 # CUDA Toolkit Version
+# CUDA 12.8 is the first version with native Blackwell (sm_120) cubin support.
+# Older CUDA versions (11.8–12.7) only support Blackwell via PTX JIT (reduced perf).
 cuda_version: "12.8"
 cuda_version_full: "12.8.0"
 
 # cuDNN Version
+# cuDNN 9.7.1 is compatible with CUDA 12.8 for Blackwell GPUs
 cudnn_version: "9.7.1"
 cudnn_version_full: "9.7.1"
 
@@ -53,6 +63,9 @@ nvidia_driver_package_proprietary: "nvidia-driver-{{ nvidia_driver_version_selec
 nvidia_driver_package_open: "nvidia-driver-{{ nvidia_driver_version_selected }}-server-open"
 
 # Kernel Package (for Blackwell architecture)
+# NOTE: The exact package name depends on Ubuntu 24.04 repo availability.
+# If linux-image-6.13.0-generic is not available, the upgrade_kernel.yml task
+# will attempt to install from the canonical-kernel-team PPA.
 nvidia_kernel_package_blackwell: "linux-image-6.13.0-generic"
 
 # GCC Package (for Blackwell architecture)
@@ -61,8 +74,19 @@ nvidia_gxx_package_blackwell: "g++-14"
 
 # Validation
 nvidia_validate_after_install: true
-nvidia_expected_gpu_count: 2  # Adjust based on your hardware
+nvidia_expected_gpu_count: 2  # 2x RTX 5090
 
 # Performance Tuning
 nvidia_persistence_mode: true
 nvidia_power_limit: null  # Set to integer (watts) if you want to limit power
+
+# Multi-GPU NCCL Configuration
+# RTX 5090 does NOT support NVLink — multi-GPU uses PCIe only.
+# P2P (peer-to-peer) GPU communication has known issues on dual RTX 5090 setups.
+# Set nccl_p2p_disable to true if you encounter P2P errors or CUDA init failures.
+nccl_p2p_disable: false
+nccl_p2p_level: "NVL"  # Options: NVL, PHB, PIX, PXB, SYS
+
+# CUDA architecture target for custom extensions
+# sm_120 = Blackwell (RTX 5090), sm_89 = Ada Lovelace, sm_80 = Ampere
+torch_cuda_arch_list: "12.0"
