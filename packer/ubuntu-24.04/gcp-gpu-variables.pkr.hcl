@@ -9,11 +9,11 @@ variable "gcp_project_id" {
 
 variable "gcp_zone" {
   type        = string
-  description = "GCP zone for build instance (must support L4 GPUs)"
+  description = "GCP zone for build instance (must support GPU accelerators)"
   default     = "us-central1-a"
   validation {
     condition     = can(regex("^us-central1-[a-c]$", var.gcp_zone))
-    error_message = "Zone must be in us-central1 (a, b, or c) for optimal L4 GPU availability."
+    error_message = "Zone must be in us-central1 (a, b, or c) for optimal GPU availability."
   }
 }
 
@@ -34,17 +34,22 @@ variable "gcp_machine_type_build" {
   description = "Machine type for build instance (with GPU)"
   default     = "g2-standard-4"
   # Options:
-  # - g2-standard-4: 4 vCPU, 16GB RAM, 1x L4 GPU (~$0.86/hr, ~$0.35/hr preemptible)
-  # - g2-standard-8: 8 vCPU, 32GB RAM, 1x L4 GPU (~$1.21/hr, ~$0.48/hr preemptible)
+  # - g2-standard-4:  4 vCPU, 16GB RAM, 1x L4 (Ada Lovelace) — cheapest
+  # - g2-standard-8:  8 vCPU, 32GB RAM, 1x L4 (Ada Lovelace)
+  # - g4-standard-4:  4 vCPU, 16GB RAM, 1x RTX PRO 6000 (Blackwell sm_120) — recommended for RTX 5090 validation
 }
 
 variable "gcp_gpu_type" {
   type        = string
-  description = "GPU type - L4 recommended (Ada Lovelace, RTX 40/50 equivalent)"
+  description = "GPU accelerator type for build instance"
   default     = "nvidia-l4"
+  # Options:
+  # - nvidia-l4:             Ada Lovelace (sm_89) — cheapest, good for workflow validation
+  # - nvidia-rtx-pro-6000:   Blackwell (sm_120) — same arch as RTX 5090, best for full stack validation
+  # - nvidia-tesla-a100:     Ampere (sm_80)
   validation {
-    condition     = contains(["nvidia-l4", "nvidia-tesla-t4", "nvidia-tesla-a100"], var.gcp_gpu_type)
-    error_message = "GPU type must be nvidia-l4 (recommended), nvidia-tesla-t4, or nvidia-tesla-a100."
+    condition     = contains(["nvidia-l4", "nvidia-rtx-pro-6000", "nvidia-tesla-t4", "nvidia-tesla-a100"], var.gcp_gpu_type)
+    error_message = "GPU type must be nvidia-l4, nvidia-rtx-pro-6000, nvidia-tesla-t4, or nvidia-tesla-a100."
   }
 }
 
@@ -127,8 +132,6 @@ variable "gcp_image_labels" {
     environment  = "production"
     project      = "vault-cube"
     epic         = "1a"
-    gpu          = "nvidia-l4"
-    architecture = "ada-lovelace"
     cuda         = "12-8"
     kernel       = "6-13"
     pytorch      = "2-7-cu128"
@@ -136,7 +139,7 @@ variable "gcp_image_labels" {
     vllm         = "latest"
     created_by   = "packer"
     os           = "ubuntu-2404"
-    target       = "rtx-5090-ready"
+    target       = "rtx-5090-blackwell"
   }
 }
 
@@ -167,11 +170,11 @@ variable "gcp_scopes" {
 variable "nvidia_gpu_architecture" {
   type        = string
   description = "GPU architecture for NVIDIA driver selection"
-  default     = "ada-lovelace"
+  default     = "blackwell"
   # Options:
-  # - ada-lovelace: RTX 4090, RTX 5090, L4
-  # - ampere: A100, H100, RTX 3090
-  # - turing: T4, RTX 2080
+  # - blackwell:     RTX 5090, RTX PRO 6000, B200 (sm_120) — target architecture
+  # - ada-lovelace:  RTX 4090, L4 (sm_89)
+  # - ampere:        A100, RTX 3090 (sm_80)
 }
 
 variable "nvidia_expected_gpu_count" {
