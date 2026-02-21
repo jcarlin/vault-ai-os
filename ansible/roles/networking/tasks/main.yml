@@ -20,11 +20,18 @@
   notify: Restart systemd-resolved
   when: use_systemd_resolved | bool
 
+- name: Check if systemd-timesyncd is available
+  command: systemctl list-unit-files systemd-timesyncd.service
+  register: timesyncd_check
+  changed_when: false
+  failed_when: false
+
 - name: Enable and start systemd-timesyncd
   systemd:
     name: systemd-timesyncd
     enabled: yes
     state: started
+  when: timesyncd_check.rc == 0 and 'systemd-timesyncd' in timesyncd_check.stdout
 
 - name: Configure NTP servers
   lineinfile:
@@ -33,6 +40,7 @@
     line: "NTP={{ ntp_servers | join(' ') }}"
     state: present
   notify: Restart systemd-timesyncd
+  when: timesyncd_check.rc == 0 and 'systemd-timesyncd' in timesyncd_check.stdout
 
 - name: Ensure network services are enabled
   systemd:
