@@ -47,7 +47,13 @@ install_ssh() {
 
   info "Installing openssh-server..."
   case "$DISTRO_FAMILY" in
-    debian) apt-get update -qq && apt-get install -y openssh-server ;;
+    debian)
+      # Try install first; only run apt-get update if package cache is stale/empty
+      if ! apt-get install -y openssh-server 2>/dev/null; then
+        info "Package cache miss — running apt-get update..."
+        apt-get update -qq && apt-get install -y openssh-server
+      fi
+      ;;
     rhel)   dnf install -y openssh-server 2>/dev/null || yum install -y openssh-server ;;
     arch)   pacman -Sy --noconfirm openssh ;;
   esac

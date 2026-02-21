@@ -8,22 +8,21 @@ and verifying it works — first from the home LAN, then from the internet.
 ## Overview / Game Plan
 
 ```
-Step 1: Run the setup script ON the cube           (installs & configures SSH)
-Step 2: Test SSH from ANOTHER device on the LAN     (phone/laptop on same wifi)
-Step 3: Set up remote access from the internet       (Tailscale — easiest option)
-Step 4: Test SSH from Costa Rica                     (the real test)
+Step 0: Confirm the cube's IP address               (on the cube itself)
+Step 1: Test LAN reachability FROM YOUR LAPTOP       (can you even reach it?)
+Step 2: Install & configure SSH ON the cube          (setup-ssh.sh or manual)
+Step 3: Test SSH from your laptop on the LAN         (ping, port check, ssh)
+Step 4: Set up remote access from the internet       (Tailscale — easiest)
+Step 5: Test SSH from Costa Rica                     (the real test)
 ```
 
 ---
 
-## STEP 0 — Prerequisites
+## STEP 0 — Confirm the Cube's IP Address (on the cube)
 
 You need:
 - Physical access to the cube (monitor + keyboard, or existing terminal)
-- The cube's local IP address (you said it's static — write it down, e.g. `192.168.1.50`)
 - Another device on the same home network (laptop, phone, etc.) for testing
-
-### Confirm the cube's IP address
 
 On the cube, run:
 
@@ -36,7 +35,55 @@ the IP address. Write it down — you'll need it throughout this guide.
 
 ---
 
-## STEP 1 — Install & Configure SSH on the Cube
+## STEP 1 — Test LAN Reachability FROM YOUR LAPTOP (before installing anything)
+
+**Do this first!** Before touching the cube, make sure your laptop can even
+talk to it on the local network. No point installing SSH if the network path
+is broken.
+
+### Option A: Run the reachability script
+
+If you have this repo checked out on your laptop (or download just this file):
+
+```bash
+chmod +x scripts/test-lan-reachability.sh
+./scripts/test-lan-reachability.sh 192.168.1.50
+```
+
+(Replace `192.168.1.50` with the cube's actual IP from Step 0.)
+
+The script checks: your own network, subnet match, ping, ARP table, and port 22.
+
+### Option B: Manual commands from your laptop
+
+```bash
+# 1. What's your laptop's IP? (should be on the same subnet as the cube)
+hostname -I
+
+# 2. Can you ping the cube?
+ping -c 4 192.168.1.50
+
+# 3. Can you see it in the ARP table? (confirms layer-2 reachability)
+ping -c 1 192.168.1.50 ; arp -n 192.168.1.50
+
+# 4. Is port 22 already open? (probably not yet, that's OK)
+nc -zv 192.168.1.50 22
+```
+
+**If ping works** — great, the network path is good. Proceed to Step 2.
+
+**If ping fails:**
+- Is the cube powered on?
+- Are both devices on the same wifi / ethernet network?
+- Double-check the IP address on the cube (`ip addr show`)
+- Try pinging your laptop FROM the cube: `ping <your-laptop-ip>`
+- Check if the router shows both devices as connected
+
+**Do NOT proceed until ping works between the two devices.**
+
+---
+
+## STEP 2 — Install & Configure SSH on the Cube
 
 ### Option A: Run the script (preferred)
 
@@ -58,25 +105,22 @@ Copy each line, paste it, press Enter, wait for it to finish, then do the next o
 **For Ubuntu / Debian / Raspberry Pi OS:**
 
 ```bash
-# 1. Update package list
-sudo apt-get update
+# 1. Install SSH server (runs apt-get update automatically if needed)
+sudo apt-get install -y openssh-server || { sudo apt-get update && sudo apt-get install -y openssh-server; }
 
-# 2. Install SSH server
-sudo apt-get install -y openssh-server
-
-# 3. Enable SSH to start on boot
+# 2. Enable SSH to start on boot
 sudo systemctl enable ssh
 
-# 4. Start SSH now
+# 3. Start SSH now
 sudo systemctl start ssh
 
-# 5. Check it's running (look for "active (running)")
+# 4. Check it's running (look for "active (running)")
 sudo systemctl status ssh
 
-# 6. Open firewall if ufw is active
+# 5. Open firewall if ufw is active
 sudo ufw allow 22/tcp
 
-# 7. Show your IP address
+# 6. Show your IP address
 echo "Your IP address is:"
 hostname -I
 ```
@@ -118,12 +162,20 @@ something went wrong — send me the full output.
 
 ---
 
-## STEP 2 — Test from the Home LAN (BEFORE trying from Costa Rica)
+## STEP 3 — Test SSH from the Home LAN (BEFORE trying from Costa Rica)
 
-This is the critical step. Use **another device on the same home wifi/network**
-(a laptop, another computer, even a phone with a terminal app like Termux).
+Now re-run the reachability test from Step 1 — this time port 22 should be open.
+Use **the same laptop on the home wifi** that you used in Step 1.
 
-### Test 2a: Ping the cube
+### Test 3a: Re-run the reachability script
+
+```bash
+./scripts/test-lan-reachability.sh 192.168.1.50
+```
+
+Port 22 should now show as OPEN. If it does, skip to Test 3c.
+
+### Test 3b: Ping the cube (manual)
 
 From the other device, run:
 
@@ -140,7 +192,7 @@ ping 192.168.1.50
 - Is the IP correct? Double-check with `ip addr show` on the cube
 - Some devices block ping — proceed to the next test anyway
 
-### Test 2b: Check if port 22 is open
+### Test 3c: Check if port 22 is open
 
 ```bash
 # Using nc (netcat) — most Linux/Mac systems have this
@@ -160,7 +212,7 @@ echo > /dev/tcp/192.168.1.50/22 && echo "Port 22 is open" || echo "Port 22 is cl
 - SSH server may not be running: go back to Step 1
 - Firewall may be blocking it: run `sudo ufw status` on the cube (or `sudo firewall-cmd --list-all`)
 
-### Test 2c: Actually SSH in
+### Test 3d: Actually SSH in
 
 From the other device on the LAN:
 
@@ -177,14 +229,14 @@ It will ask:
 
 **If you get a command prompt on the cube — SSH is working on the LAN!**
 
-### Test 2d: From a phone (if no second computer available)
+### Test 3e: From a phone (if no second computer available)
 
 Install **Termux** (Android) or **iSH** (iOS), then run the same ping/ssh commands.
 Or use the **JuiceSSH** app (Android) which has a nice GUI.
 
 ---
 
-## STEP 3 — Set Up Remote Access from the Internet
+## STEP 4 — Set Up Remote Access from the Internet
 
 Since you're in Costa Rica and the cube is on a home network, you need a way
 to punch through the home router's NAT. Two options:
@@ -246,7 +298,7 @@ If Tailscale isn't an option:
 
 ---
 
-## STEP 4 — Test from Costa Rica
+## STEP 5 — Test from Costa Rica
 
 ### Using the diagnostic script
 
@@ -314,30 +366,32 @@ tailscale ip -4
 ## Quick Reference Card (Print this for your colleague)
 
 ```
-╔══════════════════════════════════════════════════════════════╗
-║                    SSH QUICK REFERENCE                       ║
-╠══════════════════════════════════════════════════════════════╣
-║                                                              ║
-║  1. INSTALL SSH:                                             ║
-║     sudo apt-get update && sudo apt-get install -y openssh-server ║
-║     sudo systemctl enable ssh && sudo systemctl start ssh    ║
-║                                                              ║
-║  2. CHECK IT'S RUNNING:                                      ║
-║     sudo systemctl status ssh                                ║
-║                                                              ║
-║  3. FIND YOUR IP:                                            ║
-║     hostname -I                                              ║
-║                                                              ║
-║  4. TEST FROM ANOTHER LAN DEVICE:                            ║
-║     ping <CUBE-IP>                                           ║
-║     ssh <username>@<CUBE-IP>                                 ║
-║                                                              ║
-║  5. INSTALL TAILSCALE:                                       ║
-║     curl -fsSL https://tailscale.com/install.sh | sh         ║
-║     sudo tailscale up                                        ║
-║                                                              ║
-║  6. FIND TAILSCALE IP:                                       ║
-║     tailscale ip -4                                          ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════════════════╗
+║                    SSH QUICK REFERENCE                            ║
+╠═══════════════════════════════════════════════════════════════════╣
+║                                                                   ║
+║  0. GET CUBE IP (on the cube):                                    ║
+║     ip addr show | grep "inet " | grep -v 127.0.0.1              ║
+║                                                                   ║
+║  1. TEST FROM LAPTOP FIRST (on your laptop, same LAN):           ║
+║     ping <CUBE-IP>                                                ║
+║                                                                   ║
+║  2. INSTALL SSH (on the cube):                                    ║
+║     sudo apt-get install -y openssh-server                        ║
+║     sudo systemctl enable ssh && sudo systemctl start ssh         ║
+║                                                                   ║
+║  3. CHECK IT'S RUNNING (on the cube):                             ║
+║     sudo systemctl status ssh                                     ║
+║                                                                   ║
+║  4. TEST SSH FROM LAPTOP (on your laptop, same LAN):              ║
+║     ssh <username>@<CUBE-IP>                                      ║
+║                                                                   ║
+║  5. INSTALL TAILSCALE (on the cube):                              ║
+║     curl -fsSL https://tailscale.com/install.sh | sh              ║
+║     sudo tailscale up                                             ║
+║                                                                   ║
+║  6. FIND TAILSCALE IP:                                            ║
+║     tailscale ip -4                                               ║
+║                                                                   ║
+╚═══════════════════════════════════════════════════════════════════╝
 ```
