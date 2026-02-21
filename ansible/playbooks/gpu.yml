@@ -20,6 +20,8 @@
   hosts: all
   become: true
   gather_facts: true
+  vars_files:
+    - ../group_vars/all.yml
 
   pre_tasks:
     - name: Verify Ubuntu 24.04+
