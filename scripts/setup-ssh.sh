@@ -146,11 +146,24 @@ harden_sshd() {
     fi
   }
 
-  info "Applying SSH hardening (disable root login, require passwords)..."
+  info "Applying SSH hardening (disable root login, enable password auth)..."
   set_sshd_opt "PermitRootLogin"        "no"
   set_sshd_opt "PermitEmptyPasswords"   "no"
+  set_sshd_opt "PasswordAuthentication" "yes"
   set_sshd_opt "X11Forwarding"          "no"
   set_sshd_opt "MaxAuthTries"           "5"
+
+  # Remove drop-in overrides that might disable password auth (Ubuntu 22.04+)
+  local dropin_dir="/etc/ssh/sshd_config.d"
+  if [[ -d "$dropin_dir" ]]; then
+    for f in "$dropin_dir"/*.conf; do
+      [[ -f "$f" ]] || continue
+      if grep -qiE '^\s*PasswordAuthentication\s+no' "$f" 2>/dev/null; then
+        info "Fixing $f — changing PasswordAuthentication to yes"
+        sed -i 's|^\s*PasswordAuthentication\s\+no|PasswordAuthentication yes|i' "$f"
+      fi
+    done
+  fi
 
   # Reload sshd to pick up changes
   if systemctl list-unit-files ssh.service &>/dev/null 2>&1; then
@@ -159,6 +172,30 @@ harden_sshd() {
     systemctl reload sshd 2>/dev/null || systemctl restart sshd
   fi
   info "sshd config reloaded."
+}
+
+# ---------- verify password auth actually works --------------------------------
+verify_password_auth() {
+  # Check the effective sshd config to confirm password auth is on
+  if command -v sshd &>/dev/null; then
+    local effective
+    effective=$(sshd -T 2>/dev/null | grep -i "^passwordauthentication" || true)
+    if echo "$effective" | grep -qi "no"; then
+      warn "sshd reports PasswordAuthentication is still OFF."
+      warn "There may be an override file. Check /etc/ssh/sshd_config.d/"
+      warn "You may not be able to log in with a password until this is fixed."
+    elif echo "$effective" | grep -qi "yes"; then
+      info "Verified: PasswordAuthentication is ON."
+    fi
+  fi
+
+  # Confirm the vaultadmin user exists
+  if id vaultadmin &>/dev/null; then
+    info "Verified: vaultadmin user exists on this system."
+  else
+    warn "User 'vaultadmin' does NOT exist on this system!"
+    warn "Create it with:  sudo adduser vaultadmin"
+  fi
 }
 
 # ---------- print summary ----------------------------------------------------
@@ -199,6 +236,7 @@ main() {
   start_sshd
   open_firewall
   harden_sshd
+  verify_password_auth
   print_summary
 }
 
