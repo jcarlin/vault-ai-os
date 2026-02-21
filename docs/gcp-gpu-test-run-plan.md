@@ -153,8 +153,53 @@ gcloud compute instances delete gpu-test-01 --zone=us-central1-a --quiet
 
 ---
 
+## Test Results (2026-02-21)
+
+**Status: PASS** -- all critical checks passed after fixing 7 bugs.
+
+### Final Validation Results
+
+| Check | Result |
+|-------|--------|
+| `site.yml` completes | PASS (78 ok, 0 failed) |
+| `gpu.yml` pre-flight checks | PASS (Ubuntu 24.04, Docker 29.2.1, Python 3.12.3) |
+| NVIDIA driver installed | PASS (570.211.01) |
+| CUDA 12.8 installed | PASS (V12.8.93) |
+| cuDNN installed | PASS (libcudnn9-cuda-12) |
+| daemon.json not clobbered | PASS (merged with existing Docker config) |
+| `nvidia-smi` shows GPU | PASS (1x NVIDIA L4, 23034 MiB) |
+| PyTorch CUDA available | PASS (2.10.0+cu128, GPU count: 1) |
+| TensorFlow NGC container | PASS (2.17.0, GPU devices: 1) |
+| vLLM imports | PASS |
+| Docker GPU passthrough | PASS |
+| `validate-gpus.sh` | PASS (0 errors) |
+| Idempotency (2nd run) | PASS (85 ok, 1 changed -- docker pull, cosmetic) |
+
+### Bugs Found and Fixed
+
+| # | Bug | Fix | Commit |
+|---|-----|-----|--------|
+| 1 | `community.general.yaml` callback removed in Ansible 2.20 | Use `stdout_callback = default` + `result_format = yaml` | b43fb08 |
+| 2 | `systemd-timesyncd` not present on GCP (uses chrony) | Make task conditional with pre-check | b43fb08 |
+| 3 | `cuda-drivers-535` doesn't exist in CUDA repo | Bump Ada/Ampere driver to 550 | b146d9d |
+| 4 | Driver 550 DKMS fails on kernel 6.17 (GCP-specific) | Use driver 570 override for GCP test | (runtime override) |
+| 5 | `nvidia-utils-570` conflicts with `libnvidia-compute-570` | Remove explicit nvidia-utils (it's a dependency) | a8c7119 |
+| 6 | cuDNN package name template broken (`libcudnn971` vs `libcudnn9`) | Use set_fact to extract major versions | 4f8ac7a |
+| 7 | nvidia-docker repo deprecated, no Release file for Ubuntu 24.04 | Switch to libnvidia-container stable repo | 9bbdccb |
+| 8 | PEP 668 blocks system-wide pip install on Ubuntu 24.04 | Create `/opt/vault/venv` for all AI packages | e246da6 |
+| 9 | TensorFlow role only had pip method, ignored NGC container default | Implement both NGC container and pip+venv methods | d4b0e8f |
+| 10 | `vault_user` undefined when running gpu.yml standalone | Add `vars_files` to load group_vars/all.yml | b15c35a |
+
+### Notes
+
+- GCP Ubuntu 24.04 image ships kernel 6.17 (not 6.8 LTS default). Driver 550 DKMS can't build against 6.17. The Cube will have kernel 6.8 where 550 works fine. For GCP testing, driver 570 was used as override.
+- The Ada driver default remains 550 in code (correct for Cube's 6.8 kernel). Only GCP test needed 570 override.
+- All AI packages (PyTorch, vLLM) now install into `/opt/vault/venv` with a `vault-python` symlink at `/usr/local/bin/vault-python`.
+
+---
+
 ## Estimated Cost
 
 - Instance: g2-standard-8, ~$1.21/hr
-- Duration: 1.5-2 hours
-- **Total: ~$2.00-$2.50**
+- Duration: ~2 hours (20:05 - 22:06 UTC)
+- **Total: ~$2.42**
