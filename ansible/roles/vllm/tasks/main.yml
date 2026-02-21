@@ -1,14 +1,19 @@
 ---
 # ansible/roles/vllm/tasks/main.yml
 
+- name: Ensure Vault AI virtual environment exists
+  command: python3.12 -m venv /opt/vault/venv --system-site-packages
+  args:
+    creates: /opt/vault/venv/bin/python
+
 - name: Install vLLM
   pip:
     name: vllm
-    executable: pip3.12
+    virtualenv: /opt/vault/venv
   register: vllm_installed
 
 - name: Verify vLLM installation
-  shell: python3.12 -c "from vllm import LLM; print('vLLM installed successfully')"
+  shell: /opt/vault/venv/bin/python -c "from vllm import LLM; print('vLLM installed successfully')"
   register: vllm_check
   changed_when: false
 

@@ -1,6 +1,11 @@
 ---
 # ansible/roles/pytorch/tasks/main.yml
 
+- name: Create Vault AI virtual environment
+  command: python3.12 -m venv /opt/vault/venv --system-site-packages
+  args:
+    creates: /opt/vault/venv/bin/python
+
 - name: Install PyTorch with CUDA support
   pip:
     name:
@@ -8,14 +13,23 @@
       - "{{ 'torchvision' if pytorch_install_torchvision else omit }}"
       - "{{ 'torchaudio' if pytorch_install_torchaudio else omit }}"
     extra_args: "--index-url {{ pytorch_index_url }}"
-    executable: pip3.12
-  register: pytorch_installed
+    virtualenv: /opt/vault/venv
 
 - name: Verify PyTorch installation
-  shell: python3.12 -c "import torch; print(f'PyTorch {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'GPU count: {torch.cuda.device_count()}')"
+  shell: >
+    /opt/vault/venv/bin/python -c "import torch;
+    print(f'PyTorch {torch.__version__}');
+    print(f'CUDA available: {torch.cuda.is_available()}');
+    print(f'GPU count: {torch.cuda.device_count()}')"
   register: pytorch_check
   changed_when: false
 
 - name: Display PyTorch configuration
   debug:
     msg: "{{ pytorch_check.stdout_lines }}"
+
+- name: Symlink venv python to /usr/local/bin
+  file:
+    src: /opt/vault/venv/bin/python
+    dest: /usr/local/bin/vault-python
+    state: link

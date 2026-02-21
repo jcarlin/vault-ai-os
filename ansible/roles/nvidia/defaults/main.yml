@@ -7,8 +7,9 @@
 nvidia_gpu_architecture: "auto"
 
 # Driver Versions by Architecture
-nvidia_driver_version_ampere: "535"        # A100, H100
-nvidia_driver_version_ada: "535"           # RTX 4090, RTX 4080
+# Must match available cuda-drivers-{version} in NVIDIA CUDA apt repo
+nvidia_driver_version_ampere: "550"        # A100, H100
+nvidia_driver_version_ada: "550"           # RTX 4090, RTX 4080, L4
 nvidia_driver_version_blackwell: "570"     # RTX 5090, RTX 5080
 
 # Driver Type

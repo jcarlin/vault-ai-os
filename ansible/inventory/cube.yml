@@ -1,0 +1,40 @@
+---
+# ansible/inventory/cube.yml
+# Inventory for the Vault Cube workstation (4x RTX 5090)
+#
+# Usage (remote over SSH):
+#   ansible-playbook -i inventory/cube.yml playbooks/gpu.yml -vv
+#
+# Usage (local on the Cube itself — preferred):
+#   sudo ansible-playbook -i localhost, -c local playbooks/gpu.yml -vv
+
+all:
+  hosts:
+    vault-cube:
+      # ── CHANGE THIS to the Cube's IP address ──
+      ansible_host: 192.168.1.100
+      ansible_port: 22
+      ansible_user: vaultadmin
+      ansible_become: yes
+      ansible_become_method: sudo
+      ansible_python_interpreter: /usr/bin/python3.12
+
+      # GPU Configuration (4x RTX 5090 Blackwell)
+      nvidia_expected_gpu_count: 4
+      nvidia_gpu_architecture: "blackwell"
+      nvidia_driver_type: "open"  # Required for RTX 50 series
+
+      # Blackwell-specific versions
+      nvidia_driver_version_blackwell: "570"
+      cuda_version: "12.8"
+      kernel_version_minimum_blackwell: "6.13"
+      gcc_version_minimum_blackwell: "14"
+
+      # Performance
+      nvidia_persistence_mode: true
+      nvidia_power_limit: null  # Set to 575 to cap RTX 5090 TDP
+
+  children:
+    gpu_servers:
+      hosts:
+        vault-cube:
