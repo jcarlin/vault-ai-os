@@ -12,6 +12,16 @@ which machine to run it on:**
 | **COLLEAGUE'S LAPTOP** | The laptop on the same home wifi | Same home network as cube |
 | **COSTA RICA** | Your machine (remote) | Costa Rica, over the internet |
 
+### Credentials (already set up on the cube)
+
+```
+Username:  vaultadmin
+Password:  vaultadmin
+```
+
+These are the credentials you'll use for every `ssh` command in this guide.
+No new user or key needs to be created — this account already exists on the cube.
+
 ---
 
 ## Overview / Game Plan
@@ -239,15 +249,12 @@ echo > /dev/tcp/192.168.1.50/22 && echo "Port 22 is open" || echo "Port 22 is cl
 **On colleague's laptop:**
 
 ```bash
-ssh <username>@192.168.1.50
+ssh vaultadmin@192.168.1.50
 ```
-
-Replace `<username>` with the user account on the cube. If you don't know it,
-run `whoami` on the cube to see the current username.
 
 It will ask:
 1. "Are you sure you want to continue connecting?" → Type `yes`
-2. Password → Type the cube user's password
+2. Password → Type `vaultadmin`
 
 **If you get a command prompt on the cube — SSH is working on the LAN!**
 
@@ -295,7 +302,7 @@ Then:
 tailscale status
 
 # SSH to the cube using its Tailscale IP (usually 100.x.x.x)
-ssh <username>@100.x.x.x
+ssh vaultadmin@100.x.x.x
 ```
 
 That's it. Tailscale handles everything — encryption, NAT traversal, DNS.
@@ -312,7 +319,7 @@ If Tailscale isn't an option:
    - Internal port: `22`
    - Protocol: TCP
 4. Find the home's public IP: go to https://whatismyip.com on any device on the home network
-5. From Costa Rica: `ssh <username>@<public-ip> -p 22`
+5. From Costa Rica: `ssh vaultadmin@<public-ip> -p 22`
 
 **Downsides of port forwarding:**
 - Need router admin access
@@ -353,7 +360,7 @@ ping 100.x.x.x
 nc -zv 100.x.x.x 22
 
 # 3. SSH in
-ssh <username>@100.x.x.x
+ssh vaultadmin@100.x.x.x
 ```
 
 ---
@@ -365,7 +372,7 @@ ssh <username>@100.x.x.x
 | `Connection refused` | SSH not running | Run `sudo systemctl start ssh` on cube |
 | `Connection timed out` | Firewall or routing issue | Check `ufw status`, check port forwarding |
 | `No route to host` | Wrong IP or network down | Verify IP with `ip addr show` on cube |
-| `Permission denied` | Wrong username or password | Check with `whoami` on cube, reset password with `sudo passwd <user>` |
+| `Permission denied` | Wrong username or password | Username is `vaultadmin`, password is `vaultadmin`. Reset with `sudo passwd vaultadmin` on cube |
 | `Host key verification failed` | SSH key changed | Run `ssh-keygen -R <ip>` on your machine |
 | Tailscale shows "offline" | Tailscale service stopped | Run `sudo tailscale up` on cube |
 
@@ -417,7 +424,7 @@ tailscale ip -4
 ║              sudo systemctl status ssh                            ║
 ║                                                                   ║
 ║  4. [LAPTOP] TEST SSH:                                            ║
-║              ssh <username>@<CUBE-IP>                              ║
+║              ssh vaultadmin@<CUBE-IP>                              ║
 ║                                                                   ║
 ║  5. [CUBE]   INSTALL TAILSCALE:                                   ║
 ║              curl -fsSL https://tailscale.com/install.sh | sh     ║
@@ -425,7 +432,7 @@ tailscale ip -4
 ║                                                                   ║
 ║  6. [CR]     SSH FROM COSTA RICA:                                 ║
 ║              tailscale status                                     ║
-║              ssh <username>@<TAILSCALE-IP>                        ║
+║              ssh vaultadmin@<TAILSCALE-IP>                        ║
 ║                                                                   ║
 ╚═══════════════════════════════════════════════════════════════════╝
 ```

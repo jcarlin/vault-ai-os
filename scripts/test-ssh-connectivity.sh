@@ -112,8 +112,8 @@ if command -v ssh &>/dev/null; then
 
   if echo "$output" | grep -qi "permission denied\|authentication"; then
     pass "SSH handshake works (auth denied as expected with dummy user)."
-    echo "       You can connect! Just use the right username:"
-    echo "       ssh <username>@$HOST -p $PORT"
+    echo "       You can connect! Run:"
+    echo "       ssh vaultadmin@$HOST -p $PORT"
   elif echo "$output" | grep -qi "connection refused"; then
     fail "Connection refused — SSH may not be running on port $PORT."
   elif echo "$output" | grep -qi "timed out\|timeout"; then

@@ -145,7 +145,7 @@ fi
 
 if $PORT_OPEN; then
   pass "Port 22 is OPEN — SSH may already be running on the cube!"
-  echo "       Try connecting: ssh <username>@$HOST"
+  echo "       Try connecting: ssh vaultadmin@$HOST"
 else
   info "Port 22 is closed (expected if SSH isn't installed yet)."
   echo "       This is fine — once you run setup-ssh.sh on the cube,"
@@ -170,7 +170,7 @@ if echo "$PING_OUTPUT" | grep -q "bytes from"; then
   echo ""
   echo "    2. Then re-run this script to confirm port 22 opens up"
   echo ""
-  echo "    3. Test SSH: ssh <username>@$HOST"
+  echo "    3. Test SSH: ssh vaultadmin@$HOST"
 else
   echo "  Network reachability:  NO — cannot reach the cube"
   echo ""
