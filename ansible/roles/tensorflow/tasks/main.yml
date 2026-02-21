@@ -8,7 +8,10 @@
   register: tensorflow_installed
 
 - name: Verify TensorFlow installation
-  shell: python3.12 -c "import tensorflow as tf; print(f'TensorFlow {tf.__version__}'); print(f'GPU devices: {len(tf.config.list_physical_devices(\"GPU\"))}')"
+  shell: >
+    python3.12 -c "import tensorflow as tf;
+    print(f'TensorFlow {tf.__version__}');
+    print(f'GPU devices: {len(tf.config.list_physical_devices(\"GPU\"))}')"
   register: tensorflow_check
   changed_when: false
 

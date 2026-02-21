@@ -24,19 +24,33 @@
     state: present
   register: nvidia_container_toolkit_installed
 
-- name: Configure Docker daemon for NVIDIA runtime
+- name: Read existing Docker daemon configuration
+  slurp:
+    src: /etc/docker/daemon.json
+  register: existing_daemon_json
+  failed_when: false
+
+- name: Parse existing Docker daemon configuration
+  set_fact:
+    existing_docker_config: "{{ (existing_daemon_json.content | b64decode | from_json) if existing_daemon_json is succeeded else {} }}"
+
+- name: Merge NVIDIA runtime into Docker daemon configuration
+  set_fact:
+    merged_docker_config: >-
+      {{ existing_docker_config | combine({
+        'runtimes': (existing_docker_config.runtimes | default({})) | combine({
+          'nvidia': {
+            'path': 'nvidia-container-runtime',
+            'runtimeArgs': []
+          }
+        }),
+        'default-runtime': 'nvidia'
+      }) }}
+
+- name: Write merged Docker daemon configuration
   copy:
     dest: /etc/docker/daemon.json
-    content: |
-      {
-        "runtimes": {
-          "nvidia": {
-            "path": "nvidia-container-runtime",
-            "runtimeArgs": []
-          }
-        },
-        "default-runtime": "nvidia"
-      }
+    content: "{{ merged_docker_config | to_nice_json }}\n"
     mode: '0644'
   register: docker_daemon_config
 
@@ -47,7 +61,7 @@
   when: docker_daemon_config.changed
 
 - name: Test Docker GPU access
-  shell: docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
+  shell: docker run --rm --gpus all nvidia/cuda:{{ cuda_version }}.0-base-ubuntu{{ ansible_distribution_version }} nvidia-smi
   register: docker_gpu_test
   changed_when: false
   failed_when: false

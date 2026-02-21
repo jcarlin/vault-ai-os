@@ -12,7 +12,11 @@
   register: pytorch_installed
 
 - name: Verify PyTorch installation
-  shell: python3.12 -c "import torch; print(f'PyTorch {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'GPU count: {torch.cuda.device_count()}')"
+  shell: >
+    python3.12 -c "import torch;
+    print(f'PyTorch {torch.__version__}');
+    print(f'CUDA available: {torch.cuda.is_available()}');
+    print(f'GPU count: {torch.cuda.device_count()}')"
   register: pytorch_check
   changed_when: false
 

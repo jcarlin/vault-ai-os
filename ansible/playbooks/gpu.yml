@@ -1,0 +1,130 @@
+---
+# GPU Playbook - Vault Cube GPU Stack
+# Installs NVIDIA drivers, CUDA, container toolkit, and AI frameworks
+# on a system that already has the base image (site.yml) applied.
+#
+# Usage (local, on the Cube itself):
+#   sudo ansible-playbook -i localhost, -c local playbooks/gpu.yml -vv
+#
+# Usage (remote, over SSH):
+#   ansible-playbook -i inventory/cube.yml playbooks/gpu.yml -vv
+#
+# Selective runs:
+#   --tags nvidia              # Drivers + CUDA only
+#   --tags nvidia-container    # Container toolkit only
+#   --tags pytorch             # PyTorch only
+#   --tags pytorch,vllm        # PyTorch + vLLM
+#   --tags monitoring          # GPU monitoring tools only
+
+- name: Install Vault Cube GPU Stack
+  hosts: all
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Verify Ubuntu 24.04+
+      assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - ansible_distribution_version is version('24.04', '>=')
+        fail_msg: >
+          GPU playbook requires Ubuntu 24.04 or later.
+          Detected: {{ ansible_distribution }} {{ ansible_distribution_version }}
+        success_msg: "Ubuntu {{ ansible_distribution_version }} confirmed"
+      tags: ['always']
+
+    - name: Verify Docker is installed
+      command: docker --version
+      register: docker_check
+      changed_when: false
+      failed_when: docker_check.rc != 0
+      tags: ['always']
+
+    - name: Verify Python 3.12 is available
+      command: python3.12 --version
+      register: python_check
+      changed_when: false
+      failed_when: python_check.rc != 0
+      tags: ['always']
+
+    - name: Display pre-flight results
+      debug:
+        msg:
+          - "Pre-flight checks passed:"
+          - "  OS: Ubuntu {{ ansible_distribution_version }}"
+          - "  Docker: {{ docker_check.stdout }}"
+          - "  Python: {{ python_check.stdout }}"
+      tags: ['always']
+
+  roles:
+    - role: nvidia
+      tags: ['nvidia', 'drivers']
+
+    - role: nvidia-container-toolkit
+      tags: ['nvidia-container', 'container-toolkit']
+
+    - role: pytorch
+      tags: ['pytorch', 'frameworks']
+
+    - role: tensorflow
+      tags: ['tensorflow', 'frameworks']
+
+    - role: vllm
+      tags: ['vllm', 'frameworks']
+
+    - role: monitoring-basic
+      tags: ['monitoring']
+
+  post_tasks:
+    - name: Create validation scripts directory
+      file:
+        path: "/home/{{ vault_user }}/scripts"
+        state: directory
+        owner: "{{ vault_user }}"
+        group: "{{ vault_user }}"
+        mode: '0755'
+      tags: ['always']
+
+    - name: Copy GPU validation script
+      copy:
+        src: "{{ playbook_dir }}/../../scripts/validate-gpus.sh"
+        dest: "/home/{{ vault_user }}/scripts/validate-gpus.sh"
+        owner: "{{ vault_user }}"
+        group: "{{ vault_user }}"
+        mode: '0755'
+      tags: ['always']
+
+    - name: Copy PyTorch DDP test script
+      copy:
+        src: "{{ playbook_dir }}/../../scripts/test-pytorch-ddp.py"
+        dest: "/home/{{ vault_user }}/scripts/test-pytorch-ddp.py"
+        owner: "{{ vault_user }}"
+        group: "{{ vault_user }}"
+        mode: '0755'
+      failed_when: false
+      tags: ['always']
+
+    - name: Display next steps
+      debug:
+        msg:
+          - ""
+          - "============================================"
+          - "  GPU Stack Installation Complete"
+          - "============================================"
+          - ""
+          - "If the system rebooted (NVIDIA driver install), re-run this"
+          - "playbook to continue from where it left off — roles are idempotent."
+          - ""
+          - "Validation commands:"
+          - "  nvidia-smi                                    # GPU status"
+          - "  bash ~/scripts/validate-gpus.sh               # Full validation"
+          - "  python3.12 ~/scripts/test-pytorch-ddp.py      # Multi-GPU PyTorch"
+          - ""
+          - "Start vLLM inference:"
+          - "  python3.12 -m vllm.entrypoints.openai.api_server \\"
+          - "    --model Qwen/Qwen2.5-32B-Instruct-AWQ \\"
+          - "    --tensor-parallel-size 1 \\"
+          - "    --gpu-memory-utilization 0.9 \\"
+          - "    --port 8001"
+          - ""
+      tags: ['always']
