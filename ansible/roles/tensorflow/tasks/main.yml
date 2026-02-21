@@ -1,20 +1,52 @@
 ---
 # ansible/roles/tensorflow/tasks/main.yml
 
-- name: Install TensorFlow
-  pip:
-    name: "tensorflow=={{ tensorflow_version }}"
-    executable: pip3.12
-  register: tensorflow_installed
+# NGC Container method (recommended - avoids CUDA version issues)
+- name: Pull TensorFlow NGC container
+  shell: docker pull {{ tensorflow_ngc_image }}
+  register: tensorflow_ngc_pull
+  when: tensorflow_install_method == "ngc_container"
 
-- name: Verify TensorFlow installation
+- name: Verify TensorFlow NGC container
   shell: >
-    python3.12 -c "import tensorflow as tf;
+    docker run --rm --gpus all {{ tensorflow_ngc_image }}
+    python -c "import tensorflow as tf;
     print(f'TensorFlow {tf.__version__}');
     print(f'GPU devices: {len(tf.config.list_physical_devices(\"GPU\"))}')"
-  register: tensorflow_check
+  register: tensorflow_ngc_check
   changed_when: false
+  failed_when: false
+  when: tensorflow_install_method == "ngc_container"
 
-- name: Display TensorFlow configuration
+- name: Display TensorFlow NGC configuration
   debug:
-    msg: "{{ tensorflow_check.stdout_lines }}"
+    msg: "{{ tensorflow_ngc_check.stdout_lines }}"
+  when: tensorflow_install_method == "ngc_container" and tensorflow_ngc_check.rc == 0
+
+# Pip method (fallback - requires compatible CUDA version)
+- name: Ensure Vault AI virtual environment exists
+  command: python3.12 -m venv /opt/vault/venv --system-site-packages
+  args:
+    creates: /opt/vault/venv/bin/python
+  when: tensorflow_install_method == "pip"
+
+- name: Install TensorFlow via pip
+  pip:
+    name: "tensorflow=={{ tensorflow_version }}"
+    virtualenv: /opt/vault/venv
+  register: tensorflow_installed
+  when: tensorflow_install_method == "pip"
+
+- name: Verify TensorFlow pip installation
+  shell: >
+    /opt/vault/venv/bin/python -c "import tensorflow as tf;
+    print(f'TensorFlow {tf.__version__}');
+    print(f'GPU devices: {len(tf.config.list_physical_devices(\"GPU\"))}')"
+  register: tensorflow_pip_check
+  changed_when: false
+  when: tensorflow_install_method == "pip"
+
+- name: Display TensorFlow pip configuration
+  debug:
+    msg: "{{ tensorflow_pip_check.stdout_lines }}"
+  when: tensorflow_install_method == "pip"
