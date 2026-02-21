@@ -124,8 +124,6 @@ open_firewall() {
 # ---------- basic hardening --------------------------------------------------
 harden_sshd() {
   local conf="/etc/ssh/sshd_config"
-  local changed=false
-
   if [[ ! -f "$conf" ]]; then
     warn "$conf not found — skipping hardening."
     return
