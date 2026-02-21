@@ -50,8 +50,6 @@
   apt:
     name:
       - "{{ nvidia_driver_package }}"
-      - nvidia-utils-{{ nvidia_driver_version_selected }}
-      - nvidia-settings
     state: present
   register: nvidia_driver_installed
   when: nvidia_driver_check.stdout == "0"
