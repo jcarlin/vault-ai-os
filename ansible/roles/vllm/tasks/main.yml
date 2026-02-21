@@ -1,22 +1,86 @@
 ---
 # ansible/roles/vllm/tasks/main.yml
+# Install vLLM — NGC container for Blackwell, pip for older GPUs
+#
+# IMPORTANT: Precompiled pip wheels do NOT work on RTX 5090 (Blackwell).
+# The wheels lack sm_120 kernel binaries, causing silent runtime failures.
 
-- name: Ensure Vault AI virtual environment exists
-  command: python3.12 -m venv /opt/vault/venv --system-site-packages
-  args:
-    creates: /opt/vault/venv/bin/python
+# NGC Container method (recommended for Blackwell)
+- name: Install vLLM via NGC container
+  block:
+    - name: Pull vLLM NGC container
+      command: docker pull {{ vllm_ngc_image }}
+      register: vllm_pull
+      changed_when: "'Downloaded newer image' in vllm_pull.stdout or 'Pull complete' in vllm_pull.stdout"
 
-- name: Install vLLM
-  pip:
-    name: vllm
-    virtualenv: /opt/vault/venv
-  register: vllm_installed
+    - name: Verify vLLM NGC container GPU access
+      command: >
+        docker run --rm --gpus all
+        -e VLLM_FLASH_ATTN_VERSION={{ vllm_flash_attn_version }}
+        {{ vllm_ngc_image }}
+        python3 -c "from vllm import LLM; print('vLLM imported successfully')"
+      register: vllm_ngc_check
+      changed_when: false
+      failed_when: false
 
-- name: Verify vLLM installation
-  shell: /opt/vault/venv/bin/python -c "from vllm import LLM; print('vLLM installed successfully')"
-  register: vllm_check
-  changed_when: false
+    - name: Display vLLM NGC status
+      debug:
+        msg: "{{ vllm_ngc_check.stdout_lines }}"
+      when: vllm_ngc_check.rc == 0
 
-- name: Display vLLM installation status
-  debug:
-    msg: "{{ vllm_check.stdout }}"
+    - name: Create vLLM serve convenience script
+      copy:
+        dest: /usr/local/bin/vllm-serve
+        content: |
+          #!/bin/bash
+          # Launch vLLM model server with GPU access
+          # Usage: vllm-serve <model-name> [additional args]
+          MODEL="${1:?Usage: vllm-serve <model-name> [args...]}"
+          shift
+          docker run --rm --gpus all \
+            -e VLLM_FLASH_ATTN_VERSION={{ vllm_flash_attn_version }} \
+            -p {{ vllm_default_port }}:8000 \
+            -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+            {{ vllm_ngc_image }} \
+            --model "$MODEL" "$@"
+        mode: '0755'
+
+    - name: Create vLLM shell convenience script
+      copy:
+        dest: /usr/local/bin/vllm-shell
+        content: |
+          #!/bin/bash
+          # Launch an interactive shell inside the vLLM container
+          docker run --rm -it --gpus all \
+            -e VLLM_FLASH_ATTN_VERSION={{ vllm_flash_attn_version }} \
+            -v "$HOME:/workspace" \
+            -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+            -w /workspace \
+            {{ vllm_ngc_image }} \
+            "${@:-bash}"
+        mode: '0755'
+  when: vllm_install_method == "ngc_container"
+
+# Pip method (for non-Blackwell GPUs)
+- name: Install vLLM via pip
+  block:
+    - name: Ensure Vault AI virtual environment exists
+      command: python3.12 -m venv /opt/vault/venv --system-site-packages
+      args:
+        creates: /opt/vault/venv/bin/python
+
+    - name: Install vLLM
+      pip:
+        name: vllm
+        virtualenv: /opt/vault/venv
+      register: vllm_installed
+
+    - name: Verify vLLM installation
+      shell: /opt/vault/venv/bin/python -c "from vllm import LLM; print('vLLM installed successfully')"
+      register: vllm_check
+      changed_when: false
+
+    - name: Display vLLM installation status
+      debug:
+        msg: "{{ vllm_check.stdout }}"
+  when: vllm_install_method == "pip"

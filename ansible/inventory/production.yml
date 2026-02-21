@@ -1,6 +1,6 @@
 ---
 # ansible/inventory/production.yml
-# Inventory for physical Vault Cube hardware (4x RTX 5090)
+# Inventory for physical Vault Cube hardware (1x RTX 5090 (2x on BOM))
 
 all:
   hosts:
@@ -14,7 +14,7 @@ all:
       ansible_python_interpreter: /usr/bin/python3.12
 
       # GPU Configuration (RTX 5090)
-      nvidia_expected_gpu_count: 4
+      nvidia_expected_gpu_count: 1
       nvidia_gpu_architecture: "blackwell"  # RTX 50 series
 
       # Driver Configuration (Blackwell requirements)

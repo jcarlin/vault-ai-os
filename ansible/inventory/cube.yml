@@ -1,6 +1,6 @@
 ---
 # ansible/inventory/cube.yml
-# Inventory for the Vault Cube workstation (4x RTX 5090)
+# Inventory for the Vault Cube workstation (1x RTX 5090 (2x on BOM))
 #
 # Usage (remote over SSH):
 #   ansible-playbook -i inventory/cube.yml playbooks/gpu.yml -vv
@@ -19,8 +19,8 @@ all:
       ansible_become_method: sudo
       ansible_python_interpreter: /usr/bin/python3.12
 
-      # GPU Configuration (4x RTX 5090 Blackwell)
-      nvidia_expected_gpu_count: 4
+      # GPU Configuration (1x RTX 5090 Blackwell (2nd GPU pending))
+      nvidia_expected_gpu_count: 1
       nvidia_gpu_architecture: "blackwell"
       nvidia_driver_type: "open"  # Required for RTX 50 series
 

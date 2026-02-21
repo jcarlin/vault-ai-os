@@ -2,6 +2,11 @@
 # ansible/roles/nvidia/defaults/main.yml
 # Default variables for NVIDIA driver installation
 
+# Compatibility Matrix (researched Feb 2026):
+#   RTX 5090 (Blackwell, sm_120): Driver 570+, CUDA 12.8+, Kernel 6.13+, GCC 14
+#   RTX 4090 (Ada Lovelace, sm_89): Driver 550+, CUDA 12.x, Kernel 6.5+
+#   A100/H100 (Ampere, sm_80/90): Driver 550+, CUDA 12.x, Kernel 6.5+
+
 # GPU Architecture Detection
 # Options: auto, ada-lovelace (RTX 40), blackwell (RTX 50), ampere (A100/H100)
 nvidia_gpu_architecture: "auto"
@@ -15,6 +20,8 @@ nvidia_driver_version_blackwell: "570"     # RTX 5090, RTX 5080
 # Driver Type
 # Options: proprietary, open
 # NOTE: RTX 50 series (Blackwell) REQUIRES open-source modules
+#   Proprietary modules do NOT detect RTX 5090 ("No devices were found").
+#   Auto-detection in detect_gpu.yml overrides this to "open" for Blackwell.
 nvidia_driver_type: "proprietary"
 
 # CUDA Toolkit Version
@@ -62,8 +69,19 @@ nvidia_gxx_package_blackwell: "g++-14"
 
 # Validation
 nvidia_validate_after_install: true
-nvidia_expected_gpu_count: 2  # Adjust based on your hardware
+nvidia_expected_gpu_count: 1  # 1x RTX 5090 currently installed (BOM has 2x)
 
 # Performance Tuning
 nvidia_persistence_mode: true
 nvidia_power_limit: null  # Set to integer (watts) if you want to limit power
+
+# Multi-GPU NCCL Configuration
+# RTX 5090 does NOT support NVLink — multi-GPU uses PCIe only.
+# P2P (peer-to-peer) GPU communication has known issues on dual RTX 5090 setups.
+# Set nccl_p2p_disable to true if you encounter P2P errors or CUDA init failures.
+nccl_p2p_disable: false
+nccl_p2p_level: "NVL"  # Options: NVL, PHB, PIX, PXB, SYS
+
+# CUDA architecture target for custom extensions
+# sm_120 = Blackwell (RTX 5090), sm_89 = Ada Lovelace, sm_80 = Ampere
+torch_cuda_arch_list: "12.0"

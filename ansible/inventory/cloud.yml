@@ -1,24 +1,25 @@
 ---
 # ansible/inventory/cloud.yml
-# Inventory for cloud GPU instances (Vast.ai, Lambda Labs, RunPod)
+# Inventory for cloud GPU instances (GCP, RunPod, etc.)
+#
+# GCP Testing: G2 instances with L4 GPUs (Ada Lovelace) for Ansible validation.
+# RunPod Testing: RTX 5090 containers for ML framework validation on Blackwell.
 
 all:
   hosts:
-    cloud-gpu:
-      # REPLACE WITH YOUR CLOUD INSTANCE DETAILS
-      ansible_host: 123.45.67.89        # Your cloud instance IP
-      ansible_port: 12345                # SSH port (varies by provider)
-      ansible_user: root                 # Usually 'root' for cloud instances
-      ansible_ssh_private_key_file: ~/.ssh/vast_ai_key  # Your SSH key
+    gcp-gpu:
+      # GCP instance (populated when launching test runs)
+      ansible_host: "{{ gcp_instance_ip | default('127.0.0.1') }}"
+      ansible_port: 22
+      ansible_user: packer
       ansible_python_interpreter: /usr/bin/python3.12
 
-      # GPU Configuration
-      nvidia_expected_gpu_count: 2       # Adjust based on your instance
-      nvidia_gpu_architecture: "ampere"  # For A100/H100, or "auto"
+      # GPU Configuration — Ada Lovelace (GCP L4)
+      nvidia_expected_gpu_count: 1
+      nvidia_gpu_architecture: "auto"
 
       # Driver Configuration
-      nvidia_driver_version_ampere: "535"
-      cuda_version: "12.4"
+      cuda_version: "12.8"
 
   vars:
     # Cloud-specific settings
@@ -27,24 +28,13 @@ all:
   children:
     gpu_servers:
       hosts:
-        cloud-gpu:
+        gcp-gpu:
 
-# Example configurations for different cloud providers:
-
-# Vast.ai (2x A100)
-# ansible_host: <vast-ip>
-# ansible_port: <vast-port>
-# ansible_user: root
-
-# Lambda Labs (8x A100)
-# ansible_host: <lambda-ip>
-# ansible_port: 22
-# ansible_user: ubuntu
-# ansible_become: yes
-
-# RunPod (RTX 5090)
-# ansible_host: <runpod-ip>
-# ansible_port: <runpod-port>
-# ansible_user: root
-# nvidia_gpu_architecture: "blackwell"
-# nvidia_expected_gpu_count: 1
+# RunPod example (RTX 5090 Blackwell):
+#
+# runpod-rtx5090:
+#   ansible_host: <runpod-ip>
+#   ansible_port: <runpod-port>
+#   ansible_user: root
+#   nvidia_gpu_architecture: "blackwell"
+#   nvidia_expected_gpu_count: 1

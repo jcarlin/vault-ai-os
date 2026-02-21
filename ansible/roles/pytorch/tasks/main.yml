@@ -14,6 +14,8 @@
       - "{{ 'torchaudio' if pytorch_install_torchaudio else omit }}"
     extra_args: "--index-url {{ pytorch_index_url }}"
     virtualenv: /opt/vault/venv
+  environment:
+    TORCH_CUDA_ARCH_LIST: "{{ pytorch_cuda_arch_list | default('12.0') }}"
 
 - name: Verify PyTorch installation
   shell: >

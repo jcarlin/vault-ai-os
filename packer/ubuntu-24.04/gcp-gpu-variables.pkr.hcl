@@ -43,8 +43,8 @@ variable "gcp_gpu_type" {
   description = "GPU type - L4 recommended (Ada Lovelace, RTX 40/50 equivalent)"
   default     = "nvidia-l4"
   validation {
-    condition     = contains(["nvidia-l4", "nvidia-tesla-t4", "nvidia-tesla-a100"], var.gcp_gpu_type)
-    error_message = "GPU type must be nvidia-l4 (recommended), nvidia-tesla-t4, or nvidia-tesla-a100."
+    condition     = contains(["nvidia-l4", "nvidia-tesla-t4", "nvidia-tesla-a100", "nvidia-rtx-pro-6000"], var.gcp_gpu_type)
+    error_message = "GPU type must be nvidia-l4 (recommended), nvidia-tesla-t4, nvidia-tesla-a100, or nvidia-rtx-pro-6000."
   }
 }
 

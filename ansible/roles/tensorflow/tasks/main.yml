@@ -23,6 +23,20 @@
     msg: "{{ tensorflow_ngc_check.stdout_lines }}"
   when: tensorflow_install_method == "ngc_container" and tensorflow_ngc_check.rc == 0
 
+- name: Create TensorFlow convenience script
+  copy:
+    dest: /usr/local/bin/tensorflow-shell
+    content: |
+      #!/bin/bash
+      # Launch an interactive TensorFlow shell with GPU access
+      docker run --rm -it --gpus all \
+        -v "$HOME:/workspace" \
+        -w /workspace \
+        {{ tensorflow_ngc_image }} \
+        "${@:-bash}"
+    mode: '0755'
+  when: tensorflow_install_method == "ngc_container"
+
 # Pip method (fallback - requires compatible CUDA version)
 - name: Ensure Vault AI virtual environment exists
   command: python3.12 -m venv /opt/vault/venv --system-site-packages
