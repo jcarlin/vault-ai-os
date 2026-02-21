@@ -1,24 +1,27 @@
 ---
 # ansible/inventory/cloud.yml
-# Inventory for cloud GPU instances (Vast.ai, Lambda Labs, RunPod)
+# Inventory for cloud GPU instances (GCP Packer builds)
+#
+# Testing strategy: GCP G4 instances with RTX PRO 6000 Blackwell GPUs
+# provide full Packer build support (VM-level kernel modules, driver
+# install, reboot) with the same sm_120 architecture as our target
+# 2x RTX 5090 bare-metal deployment.
 
 all:
   hosts:
-    cloud-gpu:
-      # REPLACE WITH YOUR CLOUD INSTANCE DETAILS
-      ansible_host: 123.45.67.89        # Your cloud instance IP
-      ansible_port: 12345                # SSH port (varies by provider)
-      ansible_user: root                 # Usually 'root' for cloud instances
-      ansible_ssh_private_key_file: ~/.ssh/vast_ai_key  # Your SSH key
+    gcp-gpu:
+      # GCP Packer build instance (populated dynamically by Packer)
+      ansible_host: "{{ gcp_instance_ip }}"
+      ansible_port: 22
+      ansible_user: packer
       ansible_python_interpreter: /usr/bin/python3.12
 
-      # GPU Configuration
-      nvidia_expected_gpu_count: 2       # Adjust based on your instance
-      nvidia_gpu_architecture: "ampere"  # For A100/H100, or "auto"
+      # GPU Configuration — Blackwell (sm_120)
+      nvidia_expected_gpu_count: 1
+      nvidia_gpu_architecture: "blackwell"
 
-      # Driver Configuration
-      nvidia_driver_version_ampere: "535"
-      cuda_version: "12.4"
+      # Driver Configuration — matches bare-metal target
+      cuda_version: "12.8"
 
   vars:
     # Cloud-specific settings
@@ -27,24 +30,4 @@ all:
   children:
     gpu_servers:
       hosts:
-        cloud-gpu:
-
-# Example configurations for different cloud providers:
-
-# Vast.ai (2x A100)
-# ansible_host: <vast-ip>
-# ansible_port: <vast-port>
-# ansible_user: root
-
-# Lambda Labs (8x A100)
-# ansible_host: <lambda-ip>
-# ansible_port: 22
-# ansible_user: ubuntu
-# ansible_become: yes
-
-# RunPod (RTX 5090)
-# ansible_host: <runpod-ip>
-# ansible_port: <runpod-port>
-# ansible_user: root
-# nvidia_gpu_architecture: "blackwell"
-# nvidia_expected_gpu_count: 1
+        gcp-gpu:

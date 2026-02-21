@@ -1,17 +1,56 @@
 ---
 # ansible/roles/tensorflow/tasks/main.yml
+# Install TensorFlow — NGC container for Blackwell, pip for older GPUs
 
-- name: Install TensorFlow
-  pip:
-    name: "tensorflow=={{ tensorflow_version }}"
-    executable: pip3.12
-  register: tensorflow_installed
+- name: Install TensorFlow via NGC container
+  block:
+    - name: Pull TensorFlow NGC container
+      command: docker pull {{ tensorflow_ngc_image }}
+      register: tensorflow_pull
+      changed_when: "'Downloaded newer image' in tensorflow_pull.stdout or 'Pull complete' in tensorflow_pull.stdout"
 
-- name: Verify TensorFlow installation
-  shell: python3.12 -c "import tensorflow as tf; print(f'TensorFlow {tf.__version__}'); print(f'GPU devices: {len(tf.config.list_physical_devices(\"GPU\"))}')"
-  register: tensorflow_check
-  changed_when: false
+    - name: Verify TensorFlow NGC container GPU access
+      command: >
+        docker run --rm --gpus all
+        {{ tensorflow_ngc_image }}
+        python -c "import tensorflow as tf; gpus = tf.config.list_physical_devices('GPU'); print(f'TensorFlow {tf.__version__}'); print(f'GPU devices: {len(gpus)}'); [print(f'  {g.name}') for g in gpus]"
+      register: tensorflow_ngc_check
+      changed_when: false
+      failed_when: false
 
-- name: Display TensorFlow configuration
-  debug:
-    msg: "{{ tensorflow_check.stdout_lines }}"
+    - name: Display TensorFlow NGC status
+      debug:
+        msg: "{{ tensorflow_ngc_check.stdout_lines }}"
+      when: tensorflow_ngc_check.rc == 0
+
+    - name: Create TensorFlow convenience script
+      copy:
+        dest: /usr/local/bin/tensorflow-shell
+        content: |
+          #!/bin/bash
+          # Launch an interactive TensorFlow shell with GPU access
+          docker run --rm -it --gpus all \
+            -v "$HOME:/workspace" \
+            -w /workspace \
+            {{ tensorflow_ngc_image }} \
+            "${@:-bash}"
+        mode: '0755'
+  when: tensorflow_install_method == "ngc_container"
+
+- name: Install TensorFlow via pip (non-Blackwell GPUs only)
+  block:
+    - name: Install TensorFlow pip package
+      pip:
+        name: "tensorflow=={{ tensorflow_version }}"
+        executable: pip3.12
+      register: tensorflow_installed
+
+    - name: Verify TensorFlow pip installation
+      shell: python3.12 -c "import tensorflow as tf; print(f'TensorFlow {tf.__version__}'); print(f'GPU devices: {len(tf.config.list_physical_devices(\"GPU\"))}')"
+      register: tensorflow_check
+      changed_when: false
+
+    - name: Display TensorFlow configuration
+      debug:
+        msg: "{{ tensorflow_check.stdout_lines }}"
+  when: tensorflow_install_method == "pip"

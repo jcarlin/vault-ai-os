@@ -4,11 +4,13 @@
 - name: Install PyTorch with CUDA support
   pip:
     name:
-      - torch
+      - "torch=={{ pytorch_version }}"
       - "{{ 'torchvision' if pytorch_install_torchvision else omit }}"
       - "{{ 'torchaudio' if pytorch_install_torchaudio else omit }}"
     extra_args: "--index-url {{ pytorch_index_url }}"
     executable: pip3.12
+  environment:
+    TORCH_CUDA_ARCH_LIST: "{{ pytorch_cuda_arch_list | default('') }}"
   register: pytorch_installed
 
 - name: Verify PyTorch installation

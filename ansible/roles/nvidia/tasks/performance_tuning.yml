@@ -25,6 +25,32 @@
     msg: "{{ gpu_power.stdout_lines }}"
   when: gpu_power.rc == 0
 
+# Multi-GPU NCCL/P2P Configuration
+# RTX 5090 does NOT support NVLink — inter-GPU communication uses PCIe only.
+# Known issues: P2P communication fails on some dual RTX 5090 setups.
+# Setting NCCL_P2P_DISABLE=1 can resolve CUDA initialization failures.
+
+- name: Configure NCCL environment for multi-GPU (P2P disabled)
+  lineinfile:
+    path: /etc/environment
+    line: "NCCL_P2P_DISABLE=1"
+    create: yes
+  when: nccl_p2p_disable | default(false)
+
+- name: Configure NCCL P2P level
+  lineinfile:
+    path: /etc/environment
+    line: "NCCL_P2P_LEVEL={{ nccl_p2p_level }}"
+    create: yes
+  when: not (nccl_p2p_disable | default(false))
+
+- name: Set TORCH_CUDA_ARCH_LIST for custom extension builds
+  lineinfile:
+    path: /etc/environment
+    line: "TORCH_CUDA_ARCH_LIST={{ torch_cuda_arch_list }}"
+    create: yes
+  when: torch_cuda_arch_list is defined
+
 - name: Create nvidia-smi logging service
   copy:
     dest: /etc/systemd/system/nvidia-smi-log.service

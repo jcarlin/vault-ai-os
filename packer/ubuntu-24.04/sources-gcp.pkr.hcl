@@ -30,7 +30,6 @@ source "googlecompute" "ubuntu-2204-gpu" {
   machine_type = var.gcp_machine_type_build
 
   # GPU Configuration
-  # CRITICAL: L4 GPU for Ada Lovelace architecture (RTX 40/50 equivalent)
   accelerator_type  = var.gcp_gpu_type
   accelerator_count = var.gcp_gpu_count
 
@@ -163,8 +162,8 @@ source "googlecompute" "ubuntu-2404-gpu" {
   machine_type = var.gcp_machine_type_build
 
   # GPU Configuration
-  # CRITICAL: L4 GPU for Ada Lovelace architecture (RTX 40/50 equivalent)
-  # Testing RTX 5090 / Blackwell stack: CUDA 12.8, cuDNN 9.7.1
+  # Use G4 instances with RTX PRO 6000 Blackwell (sm_120) to validate
+  # the full driver/CUDA stack against the same architecture as RTX 5090
   accelerator_type  = var.gcp_gpu_type
   accelerator_count = var.gcp_gpu_count
 
