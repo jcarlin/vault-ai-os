@@ -60,6 +60,29 @@ install_ssh() {
   info "openssh-server installed."
 }
 
+# ---------- create vaultadmin user -------------------------------------------
+create_vault_user() {
+  local user="vaultadmin"
+  if id "$user" &>/dev/null; then
+    info "User '$user' already exists — skipping creation."
+    return
+  fi
+
+  info "Creating user '$user'..."
+  useradd -m -s /bin/bash "$user"
+  echo "${user}:${user}" | chpasswd
+  info "User '$user' created with password '${user}'."
+
+  # Add to sudo group if available
+  if getent group sudo &>/dev/null; then
+    usermod -aG sudo "$user"
+    info "Added '$user' to sudo group."
+  elif getent group wheel &>/dev/null; then
+    usermod -aG wheel "$user"
+    info "Added '$user' to wheel group."
+  fi
+}
+
 # ---------- enable & start sshd ---------------------------------------------
 start_sshd() {
   # service name varies: 'ssh' on Debian/Ubuntu, 'sshd' on RHEL/Arch
@@ -233,6 +256,7 @@ main() {
   need_root
   detect_distro
   install_ssh
+  create_vault_user
   start_sshd
   open_firewall
   harden_sshd
