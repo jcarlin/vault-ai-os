@@ -1,0 +1,217 @@
+#!/usr/bin/env bash
+# Vault AI Update Apply Script
+# Managed by Ansible — do not edit manually
+#
+# Performs atomic swap of staged code, dependency rebuild, and health check.
+# Called by vault-update-apply.service (systemd one-shot).
+# Auto-rolls back on any failure.
+set -euo pipefail
+
+BACKEND_DIR="{{ vault_backend_dir }}"
+BACKEND_VENV="{{ vault_backend_venv }}"
+FRONTEND_DIR="{{ vault_frontend_dir | default('/opt/vault/frontend') }}"
+UPDATES_DIR="{{ vault_updates_dir }}"
+NEXT_DIR="${UPDATES_DIR}/next"
+ROLLBACK_DIR="${UPDATES_DIR}/rollback"
+LOG_FILE="/var/log/vault/update-apply.log"
+HEALTH_URL="http://127.0.0.1:{{ vault_backend_port }}/vault/health"
+HEALTH_RETRIES=30
+HEALTH_INTERVAL=2
+
+log() {
+    echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] $*" | tee -a "$LOG_FILE"
+}
+
+rollback() {
+    log "ERROR: Update failed — rolling back..."
+
+    if [ -d "${ROLLBACK_DIR}/backend" ]; then
+        log "  Restoring backend from rollback..."
+        rm -rf "${BACKEND_DIR}"
+        cp -a "${ROLLBACK_DIR}/backend" "${BACKEND_DIR}"
+    fi
+
+    if [ -d "${ROLLBACK_DIR}/frontend" ]; then
+        log "  Restoring frontend from rollback..."
+        rm -rf "${FRONTEND_DIR}"
+        cp -a "${ROLLBACK_DIR}/frontend" "${FRONTEND_DIR}"
+    fi
+
+    log "  Reinstalling backend deps after rollback..."
+    cd "${BACKEND_DIR}"
+    /usr/local/bin/uv sync --frozen --no-dev --active 2>&1 | tee -a "$LOG_FILE" || true
+    VIRTUAL_ENV="${BACKEND_VENV}" /usr/local/bin/uv sync --frozen --no-dev --active 2>&1 | tee -a "$LOG_FILE" || true
+
+    log "  Starting services after rollback..."
+    systemctl start vault-backend || true
+    systemctl start vault-frontend || true
+
+    log "ROLLBACK COMPLETE — previous version restored."
+    exit 1
+}
+
+# Trap any errors for auto-rollback
+trap rollback ERR
+
+# ============================================================================
+# PRE-FLIGHT CHECKS
+# ============================================================================
+
+log "=========================================="
+log "Vault AI Update Apply — starting"
+log "=========================================="
+
+if [ ! -d "${NEXT_DIR}" ]; then
+    log "ERROR: No staged update found at ${NEXT_DIR}"
+    exit 1
+fi
+
+HAS_BACKEND=false
+HAS_FRONTEND=false
+
+if [ -d "${NEXT_DIR}/backend" ]; then
+    HAS_BACKEND=true
+    log "  Backend update staged"
+fi
+
+if [ -d "${NEXT_DIR}/frontend" ]; then
+    HAS_FRONTEND=true
+    log "  Frontend update staged"
+fi
+
+if [ "$HAS_BACKEND" = false ] && [ "$HAS_FRONTEND" = false ]; then
+    log "ERROR: Staged update has no backend or frontend component"
+    exit 1
+fi
+
+# ============================================================================
+# STOP SERVICES
+# ============================================================================
+
+log "Stopping services..."
+systemctl stop vault-frontend 2>/dev/null || true
+systemctl stop vault-backend 2>/dev/null || true
+sleep 2
+log "  Services stopped"
+
+# ============================================================================
+# BACKUP CURRENT STATE
+# ============================================================================
+
+log "Backing up current state to ${ROLLBACK_DIR}..."
+rm -rf "${ROLLBACK_DIR}"
+mkdir -p "${ROLLBACK_DIR}"
+
+if [ "$HAS_BACKEND" = true ] && [ -d "${BACKEND_DIR}" ]; then
+    cp -a "${BACKEND_DIR}" "${ROLLBACK_DIR}/backend"
+    log "  Backend backed up"
+fi
+
+if [ "$HAS_FRONTEND" = true ] && [ -d "${FRONTEND_DIR}" ]; then
+    cp -a "${FRONTEND_DIR}" "${ROLLBACK_DIR}/frontend"
+    log "  Frontend backed up"
+fi
+
+# ============================================================================
+# SWAP CODE — ATOMIC MOVE
+# ============================================================================
+
+log "Swapping staged code to live directories..."
+
+if [ "$HAS_BACKEND" = true ]; then
+    # Preserve data directories that are NOT part of the code
+    rm -rf "${BACKEND_DIR}/app" "${BACKEND_DIR}/alembic" "${BACKEND_DIR}/config" \
+           "${BACKEND_DIR}/scripts" "${BACKEND_DIR}/pyproject.toml" "${BACKEND_DIR}/uv.lock"
+    cp -a "${NEXT_DIR}/backend/." "${BACKEND_DIR}/"
+    chown -R {{ vault_user }}:{{ vault_user }} "${BACKEND_DIR}"
+    log "  Backend code swapped"
+fi
+
+if [ "$HAS_FRONTEND" = true ]; then
+    # Preserve node_modules to speed up rebuild; npm ci will handle changes
+    rm -rf "${FRONTEND_DIR}/src" "${FRONTEND_DIR}/public" \
+           "${FRONTEND_DIR}/package.json" "${FRONTEND_DIR}/package-lock.json" \
+           "${FRONTEND_DIR}/next.config.ts" "${FRONTEND_DIR}/tsconfig.json" \
+           "${FRONTEND_DIR}/tailwind.config.ts" "${FRONTEND_DIR}/postcss.config.mjs"
+    cp -a "${NEXT_DIR}/frontend/." "${FRONTEND_DIR}/"
+    chown -R {{ vault_user }}:{{ vault_user }} "${FRONTEND_DIR}"
+    log "  Frontend code swapped"
+fi
+
+# ============================================================================
+# REBUILD DEPENDENCIES
+# ============================================================================
+
+if [ "$HAS_BACKEND" = true ]; then
+    log "Reinstalling backend Python dependencies..."
+    cd "${BACKEND_DIR}"
+    VIRTUAL_ENV="${BACKEND_VENV}" /usr/local/bin/uv sync --frozen --no-dev --active 2>&1 | tee -a "$LOG_FILE"
+    log "  Backend deps installed"
+
+    # Run Alembic migrations if present
+    if [ -d "${BACKEND_DIR}/alembic" ]; then
+        log "Running database migrations..."
+        "${BACKEND_VENV}/bin/python" -m alembic upgrade head 2>&1 | tee -a "$LOG_FILE"
+        log "  Migrations complete"
+    fi
+fi
+
+if [ "$HAS_FRONTEND" = true ]; then
+    log "Rebuilding frontend..."
+    cd "${FRONTEND_DIR}"
+    npm ci --production 2>&1 | tee -a "$LOG_FILE"
+    npm run build 2>&1 | tee -a "$LOG_FILE"
+    log "  Frontend rebuilt"
+fi
+
+# ============================================================================
+# START SERVICES
+# ============================================================================
+
+log "Starting services..."
+systemctl start vault-backend
+sleep 3
+
+if [ "$HAS_FRONTEND" = true ] || systemctl is-enabled vault-frontend >/dev/null 2>&1; then
+    systemctl start vault-frontend
+fi
+
+log "  Services started"
+
+# ============================================================================
+# HEALTH CHECK
+# ============================================================================
+
+log "Running health checks (${HEALTH_RETRIES} attempts, ${HEALTH_INTERVAL}s interval)..."
+HEALTHY=false
+
+for i in $(seq 1 $HEALTH_RETRIES); do
+    HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' "$HEALTH_URL" 2>/dev/null || echo "000")
+    if [ "$HTTP_CODE" = "200" ]; then
+        HEALTHY=true
+        log "  Health check passed on attempt ${i}"
+        break
+    fi
+    log "  Attempt ${i}/${HEALTH_RETRIES}: HTTP ${HTTP_CODE}"
+    sleep "$HEALTH_INTERVAL"
+done
+
+if [ "$HEALTHY" = false ]; then
+    log "ERROR: Health check failed after ${HEALTH_RETRIES} attempts"
+    # Trigger rollback via ERR trap
+    false
+fi
+
+# ============================================================================
+# CLEANUP
+# ============================================================================
+
+log "Cleaning up staged files..."
+rm -rf "${NEXT_DIR}"
+log "  Staged files removed"
+
+log "=========================================="
+log "UPDATE APPLIED SUCCESSFULLY"
+log "=========================================="
+
+exit 0

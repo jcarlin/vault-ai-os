@@ -1,0 +1,26 @@
+# Vault AI Update Apply (One-Shot)
+# Managed by Ansible — do not edit manually
+#
+# Triggered by the API gateway after staging an update bundle.
+# Runs the apply script which stops services, swaps code, rebuilds, and restarts.
+# Auto-rolls back on failure.
+
+[Unit]
+Description=Vault AI Update Apply
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/vault/updates/vault-update-apply.sh
+TimeoutStartSec=600
+StandardOutput=journal
+StandardError=journal
+
+# Run as root — needs to stop/start systemd services
+User=root
+
+# Security: only allow access to Vault paths
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

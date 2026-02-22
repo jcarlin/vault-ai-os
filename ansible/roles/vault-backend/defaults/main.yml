@@ -39,6 +39,11 @@ vault_secret_key: ""
 # Override this in your Packer variables or group_vars
 vault_backend_source: ""
 
+# Update mechanism (Epic 10)
+vault_updates_dir: /opt/vault/updates
+vault_gpg_key_path: /opt/vault/config/vault-ai-signing-key.pub
+vault_version_file: /opt/vault/data/version.json
+
 # System dependencies required by Python packages
 vault_backend_system_deps:
   - libmagic1

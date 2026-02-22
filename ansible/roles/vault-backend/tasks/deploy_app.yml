@@ -132,3 +132,85 @@
   tags:
     - backend
     - backend-deploy
+
+# ============================================================================
+# UPDATE MECHANISM (Epic 10)
+# ============================================================================
+
+- name: Create update directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0755'
+  loop:
+    - "{{ vault_updates_dir }}"
+    - "{{ vault_updates_dir }}/staging"
+    - "{{ vault_updates_dir }}/rollback"
+    - "{{ vault_updates_dir }}/bundles"
+    - "{{ vault_updates_dir }}/next"
+  tags:
+    - backend
+    - backend-deploy
+    - backend-updates
+
+- name: Deploy GPG public key for update verification
+  ansible.builtin.copy:
+    src: vault-ai-signing-key.pub
+    dest: "{{ vault_gpg_key_path }}"
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0644'
+  ignore_errors: yes
+  tags:
+    - backend
+    - backend-deploy
+    - backend-updates
+
+- name: Deploy vault-update-apply script
+  ansible.builtin.template:
+    src: vault-update-apply.sh.j2
+    dest: "{{ vault_updates_dir }}/vault-update-apply.sh"
+    owner: root
+    group: root
+    mode: '0755'
+  tags:
+    - backend
+    - backend-deploy
+    - backend-updates
+
+- name: Deploy vault-update-apply systemd service
+  ansible.builtin.template:
+    src: vault-update-apply.service.j2
+    dest: /etc/systemd/system/vault-update-apply.service
+    owner: root
+    group: root
+    mode: '0644'
+  tags:
+    - backend
+    - backend-deploy
+    - backend-updates
+
+- name: Deploy sudoers fragment for update apply
+  ansible.builtin.copy:
+    src: vault-updates-sudoers
+    dest: /etc/sudoers.d/vault-updates
+    owner: root
+    group: root
+    mode: '0440'
+    validate: 'visudo -cf %s'
+  tags:
+    - backend
+    - backend-deploy
+    - backend-updates
+
+- name: Enable vault-update-apply service
+  ansible.builtin.systemd:
+    name: vault-update-apply
+    enabled: yes
+    daemon_reload: yes
+  tags:
+    - backend
+    - backend-deploy
+    - backend-updates
