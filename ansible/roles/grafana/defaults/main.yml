@@ -1,0 +1,25 @@
+---
+# Grafana — pre-built monitoring dashboards
+# Accessible at http://<host>:3000
+
+grafana_port: 3000
+
+# Default admin credentials (changeable via first-boot wizard in future)
+grafana_admin_user: admin
+grafana_admin_password: vault-admin
+
+# Grafana APT repository
+grafana_apt_key_url: "https://apt.grafana.com/gpg.key"
+grafana_apt_repo: "deb [signed-by=/usr/share/keyrings/grafana.gpg] https://apt.grafana.com stable main"
+
+# Prometheus datasource (must match prometheus role port)
+prometheus_url: "http://localhost:9091"
+
+# Dashboard provisioning directory
+grafana_dashboards_dir: /var/lib/grafana/dashboards
+
+# Allow anonymous viewing (useful for kiosk/TV displays)
+grafana_allow_anonymous: false
+
+# Allow embedding in iframes (for Vault UI integration)
+grafana_allow_embedding: true

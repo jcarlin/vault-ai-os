@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  author: Vault AI Systems
+  description: Install Grafana with pre-configured dashboards for Vault Cube monitoring
+  company: Vault AI Systems
+  license: MIT
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble  # 24.04 LTS
+
+  galaxy_tags:
+    - monitoring
+    - grafana
+    - dashboards
+    - visualization
+
+dependencies: []

@@ -1,0 +1,40 @@
+---
+# Validate Prometheus stack is operational
+
+- name: Check Prometheus service status
+  command: systemctl is-active prometheus
+  register: prometheus_active
+  changed_when: false
+  failed_when: false
+  when: not (packer_build | default(false))
+
+- name: Check Prometheus health endpoint
+  uri:
+    url: "http://localhost:{{ prometheus_port }}/-/healthy"
+    return_content: yes
+  register: prometheus_health
+  failed_when: false
+  when: not (packer_build | default(false))
+
+- name: Check node_exporter status
+  command: systemctl is-active prometheus-node-exporter
+  register: node_exporter_active
+  changed_when: false
+  failed_when: false
+  when: not (packer_build | default(false))
+
+- name: Check DCGM exporter status
+  command: systemctl is-active dcgm-exporter
+  register: dcgm_active
+  changed_when: false
+  failed_when: false
+  when: not (packer_build | default(false))
+
+- name: Display Prometheus stack status
+  debug:
+    msg:
+      - "Prometheus: {{ prometheus_active.stdout | default('not checked') }} — http://localhost:{{ prometheus_port }}"
+      - "Prometheus health: {{ prometheus_health.status | default('not checked') }}"
+      - "node_exporter: {{ node_exporter_active.stdout | default('not checked') }} — :{{ node_exporter_port }}"
+      - "DCGM exporter: {{ dcgm_active.stdout | default('not checked') }} — :{{ dcgm_exporter_port }}"
+  tags: ['prometheus', 'validate']

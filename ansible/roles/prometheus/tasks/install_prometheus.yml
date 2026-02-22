@@ -1,0 +1,40 @@
+---
+# Install Prometheus server from Ubuntu repos
+
+- name: Install Prometheus
+  apt:
+    name: prometheus
+    state: present
+    update_cache: yes
+
+- name: Create Prometheus rules directory
+  file:
+    path: "{{ prometheus_rules_dir }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+
+- name: Create Prometheus systemd override directory
+  file:
+    path: /etc/systemd/system/prometheus.service.d
+    state: directory
+    mode: '0755'
+
+- name: Configure Prometheus to listen on port {{ prometheus_port }}
+  copy:
+    dest: /etc/systemd/system/prometheus.service.d/override.conf
+    content: |
+      [Service]
+      ExecStart=
+      ExecStart=/usr/bin/prometheus \
+        --config.file=/etc/prometheus/prometheus.yml \
+        --storage.tsdb.path={{ prometheus_data_dir }} \
+        --storage.tsdb.retention.time={{ prometheus_retention }} \
+        --web.listen-address=0.0.0.0:{{ prometheus_port }} \
+        --web.console.templates=/etc/prometheus/consoles \
+        --web.console.libraries=/etc/prometheus/console_libraries
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart prometheus

@@ -1,0 +1,28 @@
+---
+# Install NVIDIA DCGM exporter as a Docker container
+# Exposes per-GPU metrics: utilization, VRAM, temperature, power, ECC errors
+
+- name: Pull DCGM exporter image
+  command: docker pull {{ dcgm_exporter_image }}
+  register: dcgm_pull
+  changed_when: "'Downloaded newer image' in dcgm_pull.stdout or 'Pull complete' in dcgm_pull.stdout"
+
+- name: Deploy DCGM exporter systemd unit
+  template:
+    src: dcgm-exporter.service.j2
+    dest: /etc/systemd/system/dcgm-exporter.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart dcgm-exporter
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Enable DCGM exporter service
+  systemd:
+    name: dcgm-exporter
+    enabled: yes
+    state: started
+  when: not (packer_build | default(false))

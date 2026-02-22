@@ -1,0 +1,33 @@
+---
+# Deploy Prometheus alert rules for Vault Cube
+
+- name: Ensure rules directory exists
+  file:
+    path: "{{ prometheus_rules_dir }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+  tags: ['alerts', 'configure']
+
+- name: Deploy Vault Cube alert rules
+  template:
+    src: vault-alerts.yml.j2
+    dest: "{{ prometheus_rules_dir }}/vault-alerts.yml"
+    owner: prometheus
+    group: prometheus
+    mode: '0644'
+  notify: Restart prometheus for alerts
+  tags: ['alerts', 'configure']
+
+- name: Validate alert rules with promtool
+  command: promtool check rules {{ prometheus_rules_dir }}/vault-alerts.yml
+  register: promtool_check
+  changed_when: false
+  failed_when: promtool_check.rc != 0
+  tags: ['alerts', 'validate']
+
+- name: Display alert rules validation result
+  debug:
+    msg: "Alert rules validation: {{ promtool_check.stdout }}"
+  tags: ['alerts', 'validate']

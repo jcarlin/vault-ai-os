@@ -1,0 +1,11 @@
+---
+# Deploy Grafana main configuration
+
+- name: Deploy grafana.ini configuration
+  template:
+    src: grafana.ini.j2
+    dest: /etc/grafana/grafana.ini
+    owner: root
+    group: grafana
+    mode: '0640'
+  notify: Restart grafana

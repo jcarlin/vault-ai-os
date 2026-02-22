@@ -1,0 +1,22 @@
+---
+# Grafana: pre-configured dashboards for Vault Cube monitoring
+
+- name: Install Grafana
+  include_tasks: install.yml
+  tags: ['grafana', 'install']
+
+- name: Configure Grafana
+  include_tasks: configure.yml
+  tags: ['grafana', 'configure']
+
+- name: Provision datasources
+  include_tasks: provision_datasources.yml
+  tags: ['grafana', 'datasources']
+
+- name: Provision dashboards
+  include_tasks: provision_dashboards.yml
+  tags: ['grafana', 'dashboards']
+
+- name: Validate Grafana
+  include_tasks: validate.yml
+  tags: ['grafana', 'validate']

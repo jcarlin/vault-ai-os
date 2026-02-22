@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+# File-based dashboard provisioning for Vault Cube
+
+apiVersion: 1
+
+providers:
+  - name: Vault Cube
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: {{ grafana_dashboards_dir }}
+      foldersFromFilesStructure: false

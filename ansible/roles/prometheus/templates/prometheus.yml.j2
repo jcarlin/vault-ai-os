@@ -1,0 +1,40 @@
+# {{ ansible_managed }}
+# Prometheus configuration for Vault Cube
+
+global:
+  scrape_interval: {{ prometheus_scrape_interval }}
+  evaluation_interval: {{ prometheus_evaluation_interval }}
+
+  external_labels:
+    instance: "vault-cube"
+
+rule_files:
+  - "{{ prometheus_rules_dir }}/*.yml"
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:{{ prometheus_port }}"]
+
+  # System metrics: CPU, RAM, disk, network, temperatures
+  - job_name: "node"
+    static_configs:
+      - targets: ["localhost:{{ node_exporter_port }}"]
+
+  # GPU metrics: utilization, VRAM, temperature, power, ECC
+  - job_name: "nvidia-gpu"
+    static_configs:
+      - targets: ["localhost:{{ dcgm_exporter_port }}"]
+
+  # Vault API backend: inference RPM, latency, tokens/sec
+  - job_name: "vault-api"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["localhost:{{ vault_api_port }}"]
+
+  # vLLM native metrics: queue depth, KV cache, batch stats
+  - job_name: "vllm"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["localhost:{{ vllm_port }}"]

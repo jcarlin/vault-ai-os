@@ -1,0 +1,22 @@
+---
+# Prometheus: metrics collection for Vault Cube monitoring stack
+
+- name: Install Prometheus and node_exporter
+  include_tasks: install_prometheus.yml
+  tags: ['prometheus', 'install']
+
+- name: Install node_exporter
+  include_tasks: install_node_exporter.yml
+  tags: ['prometheus', 'node-exporter', 'install']
+
+- name: Install DCGM GPU exporter
+  include_tasks: install_dcgm_exporter.yml
+  tags: ['prometheus', 'dcgm', 'install']
+
+- name: Configure Prometheus scrape targets
+  include_tasks: configure.yml
+  tags: ['prometheus', 'configure']
+
+- name: Validate Prometheus stack
+  include_tasks: validate.yml
+  tags: ['prometheus', 'validate']

@@ -1,0 +1,24 @@
+# {{ ansible_managed }}
+# Grafana configuration for Vault Cube
+
+[server]
+http_port = {{ grafana_port }}
+root_url = http://%(domain)s:{{ grafana_port }}/
+
+[security]
+admin_user = {{ grafana_admin_user }}
+admin_password = {{ grafana_admin_password }}
+allow_embedding = {{ grafana_allow_embedding | lower }}
+
+{% if grafana_allow_anonymous %}
+[auth.anonymous]
+enabled = true
+org_role = Viewer
+{% endif %}
+
+[dashboards]
+default_home_dashboard_path = {{ grafana_dashboards_dir }}/vault-overview.json
+
+[log]
+mode = console file
+level = info

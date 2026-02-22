@@ -1,0 +1,22 @@
+---
+# Prometheus alert rules — configurable thresholds
+# All values can be overridden via group_vars or host_vars
+
+# GPU temperature thresholds (Celsius)
+alert_gpu_temp_critical: 80
+alert_gpu_temp_warning: 75
+
+# Disk usage thresholds (percent)
+alert_disk_critical: 90
+alert_disk_warning: 80
+
+# RAM usage threshold (percent)
+alert_ram_critical: 90
+
+# Service down detection windows
+alert_vllm_down_for: "2m"
+alert_vault_api_down_for: "2m"
+alert_dcgm_down_for: "2m"
+
+# Rules file destination
+prometheus_rules_dir: /etc/prometheus/rules

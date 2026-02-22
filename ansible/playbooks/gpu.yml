@@ -77,6 +77,18 @@
     - role: monitoring-basic
       tags: ['monitoring']
 
+    - role: cockpit
+      tags: ['monitoring', 'cockpit']
+
+    - role: prometheus
+      tags: ['monitoring', 'prometheus']
+
+    - role: grafana
+      tags: ['monitoring', 'grafana']
+
+    - role: prometheus-alerts
+      tags: ['monitoring', 'alerts']
+
   post_tasks:
     - name: Create validation scripts directory
       file:
@@ -128,5 +140,10 @@
           - "    --tensor-parallel-size 1 \\"
           - "    --gpu-memory-utilization 0.9 \\"
           - "    --port 8001"
+          - ""
+          - "Monitoring:"
+          - "  https://{{ ansible_hostname }}:9090   # Cockpit (system admin)"
+          - "  http://{{ ansible_hostname }}:3000    # Grafana (dashboards)"
+          - "  http://{{ ansible_hostname }}:9091    # Prometheus (metrics)"
           - ""
       tags: ['always']

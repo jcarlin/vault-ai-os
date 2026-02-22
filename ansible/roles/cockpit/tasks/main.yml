@@ -1,0 +1,41 @@
+---
+# Cockpit: web-based system admin at :9090
+# Provides: logs, services, terminal, network, storage management
+
+- name: Install Cockpit packages
+  apt:
+    name: "{{ cockpit_packages }}"
+    state: present
+    update_cache: yes
+  tags: ['cockpit', 'install']
+
+- name: Deploy Cockpit configuration
+  template:
+    src: cockpit.conf.j2
+    dest: /etc/cockpit/cockpit.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart cockpit
+  tags: ['cockpit', 'configure']
+
+- name: Enable Cockpit socket activation
+  systemd:
+    name: cockpit.socket
+    enabled: yes
+    state: started
+  when: not (packer_build | default(false))
+  tags: ['cockpit', 'service']
+
+- name: Verify Cockpit socket is active
+  command: systemctl is-active cockpit.socket
+  register: cockpit_status
+  changed_when: false
+  failed_when: false
+  when: not (packer_build | default(false))
+  tags: ['cockpit', 'validate']
+
+- name: Display Cockpit status
+  debug:
+    msg: "Cockpit: {{ cockpit_status.stdout | default('not checked (packer build)') }} — https://{{ ansible_hostname }}:{{ cockpit_port }}"
+  tags: ['cockpit', 'validate']

@@ -1,0 +1,6 @@
+---
+- name: Restart cockpit
+  systemd:
+    name: cockpit.socket
+    state: restarted
+  when: not (packer_build | default(false))

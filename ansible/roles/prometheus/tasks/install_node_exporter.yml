@@ -1,0 +1,14 @@
+---
+# Install node_exporter for system-level metrics (CPU, RAM, disk, network, temps)
+
+- name: Install prometheus-node-exporter
+  apt:
+    name: prometheus-node-exporter
+    state: present
+
+- name: Enable node_exporter service
+  systemd:
+    name: prometheus-node-exporter
+    enabled: yes
+    state: started
+  when: not (packer_build | default(false))

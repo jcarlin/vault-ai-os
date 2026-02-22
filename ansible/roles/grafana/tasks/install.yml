@@ -1,0 +1,28 @@
+---
+# Install Grafana from the official APT repository
+
+- name: Install prerequisites
+  apt:
+    name:
+      - apt-transport-https
+      - software-properties-common
+    state: present
+    update_cache: yes
+
+- name: Add Grafana GPG key
+  shell: |
+    curl -fsSL {{ grafana_apt_key_url }} | gpg --dearmor -o /usr/share/keyrings/grafana.gpg
+  args:
+    creates: /usr/share/keyrings/grafana.gpg
+
+- name: Add Grafana APT repository
+  apt_repository:
+    repo: "{{ grafana_apt_repo }}"
+    state: present
+    filename: grafana
+
+- name: Install Grafana
+  apt:
+    name: grafana
+    state: present
+    update_cache: yes

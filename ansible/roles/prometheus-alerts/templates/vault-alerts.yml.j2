@@ -1,0 +1,83 @@
+# {{ ansible_managed }}
+# Vault Cube Prometheus Alert Rules
+
+groups:
+  - name: vault-gpu
+    rules:
+      - alert: GPUTemperatureCritical
+        expr: DCGM_FI_DEV_GPU_TEMP > {{ alert_gpu_temp_critical }}
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GPU temperature critical ({{ '{{' }} $labels.gpu {{ '}}' }})"
+          description: "GPU {{ '{{' }} $labels.gpu {{ '}}' }} temperature is {{ '{{' }} $value {{ '}}' }}°C (threshold: {{ alert_gpu_temp_critical }}°C)"
+
+      - alert: GPUTemperatureWarning
+        expr: DCGM_FI_DEV_GPU_TEMP > {{ alert_gpu_temp_warning }}
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU temperature warning ({{ '{{' }} $labels.gpu {{ '}}' }})"
+          description: "GPU {{ '{{' }} $labels.gpu {{ '}}' }} temperature is {{ '{{' }} $value {{ '}}' }}°C (threshold: {{ alert_gpu_temp_warning }}°C)"
+
+  - name: vault-disk
+    rules:
+      - alert: DiskUsageCritical
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > {{ alert_disk_critical }}
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Root filesystem usage critical"
+          description: "Root filesystem is {{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}% full (threshold: {{ alert_disk_critical }}%)"
+
+      - alert: DiskUsageWarning
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > {{ alert_disk_warning }}
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Root filesystem usage warning"
+          description: "Root filesystem is {{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}% full (threshold: {{ alert_disk_warning }}%)"
+
+  - name: vault-memory
+    rules:
+      - alert: RAMUsageCritical
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > {{ alert_ram_critical }}
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "RAM usage critical"
+          description: "RAM usage is {{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}% (threshold: {{ alert_ram_critical }}%)"
+
+  - name: vault-services
+    rules:
+      - alert: VLLMDown
+        expr: up{job="vllm"} == 0
+        for: {{ alert_vllm_down_for }}
+        labels:
+          severity: critical
+        annotations:
+          summary: "vLLM inference engine is down"
+          description: "vLLM has been unreachable for more than {{ alert_vllm_down_for }}"
+
+      - alert: VaultAPIDown
+        expr: up{job="vault-api"} == 0
+        for: {{ alert_vault_api_down_for }}
+        labels:
+          severity: critical
+        annotations:
+          summary: "Vault API gateway is down"
+          description: "Vault API has been unreachable for more than {{ alert_vault_api_down_for }}"
+
+      - alert: DCGMExporterDown
+        expr: up{job="nvidia-gpu"} == 0
+        for: {{ alert_dcgm_down_for }}
+        labels:
+          severity: warning
+        annotations:
+          summary: "DCGM GPU exporter is down"
+          description: "GPU metrics exporter has been unreachable for more than {{ alert_dcgm_down_for }}"

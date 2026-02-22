@@ -1,0 +1,28 @@
+---
+# Prometheus — metrics collection and alerting
+# Web UI at http://<host>:9091 (not 9090 — Cockpit uses that)
+
+# Prometheus server
+prometheus_port: 9091
+prometheus_retention: "30d"
+prometheus_scrape_interval: "15s"
+prometheus_evaluation_interval: "15s"
+
+# node_exporter — CPU, RAM, disk, network, temperatures
+node_exporter_port: 9100
+
+# DCGM GPU exporter — per-GPU utilization, VRAM, temp, power
+dcgm_exporter_port: 9400
+dcgm_exporter_image: "nvcr.io/nvidia/k8s/dcgm-exporter:3.3.9-3.6.1-ubuntu22.04"
+
+# Vault backend metrics endpoint
+vault_api_port: 8000
+
+# vLLM native metrics endpoint
+vllm_port: 8001
+
+# Data directory
+prometheus_data_dir: /var/lib/prometheus
+
+# Alert rules directory
+prometheus_rules_dir: /etc/prometheus/rules

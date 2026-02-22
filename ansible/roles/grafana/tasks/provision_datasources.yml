@@ -1,0 +1,19 @@
+---
+# Auto-provision Prometheus datasource (no manual UI setup required)
+
+- name: Create datasource provisioning directory
+  file:
+    path: /etc/grafana/provisioning/datasources
+    state: directory
+    owner: root
+    group: grafana
+    mode: '0755'
+
+- name: Deploy Prometheus datasource
+  template:
+    src: datasources/prometheus.yml.j2
+    dest: /etc/grafana/provisioning/datasources/prometheus.yml
+    owner: root
+    group: grafana
+    mode: '0640'
+  notify: Restart grafana

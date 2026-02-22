@@ -1,0 +1,36 @@
+---
+# Validate Grafana is operational with dashboards provisioned
+
+- name: Check Grafana service status
+  command: systemctl is-active grafana-server
+  register: grafana_active
+  changed_when: false
+  failed_when: false
+  when: not (packer_build | default(false))
+
+- name: Check Grafana health endpoint
+  uri:
+    url: "http://localhost:{{ grafana_port }}/api/health"
+    return_content: yes
+  register: grafana_health
+  failed_when: false
+  when: not (packer_build | default(false))
+
+- name: Verify dashboards are provisioned
+  uri:
+    url: "http://localhost:{{ grafana_port }}/api/search?type=dash-db"
+    user: "{{ grafana_admin_user }}"
+    password: "{{ grafana_admin_password }}"
+    force_basic_auth: yes
+    return_content: yes
+  register: grafana_dashboards
+  failed_when: false
+  when: not (packer_build | default(false))
+
+- name: Display Grafana status
+  debug:
+    msg:
+      - "Grafana: {{ grafana_active.stdout | default('not checked') }} — http://localhost:{{ grafana_port }}"
+      - "Health: {{ (grafana_health.json | default({})).database | default('not checked') }}"
+      - "Dashboards: {{ (grafana_dashboards.json | default([])) | length }} provisioned"
+  tags: ['grafana', 'validate']

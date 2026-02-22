@@ -1,0 +1,13 @@
+---
+- name: Restart prometheus
+  systemd:
+    name: prometheus
+    state: restarted
+    daemon_reload: yes
+  when: not (packer_build | default(false))
+
+- name: Restart dcgm-exporter
+  systemd:
+    name: dcgm-exporter
+    state: restarted
+  when: not (packer_build | default(false))

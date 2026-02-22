@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+# Cockpit configuration for Vault Cube
+
+[WebService]
+# Listen port
+Port = {{ cockpit_port }}
+
+# Require HTTPS connections
+RequireHost = {{ cockpit_require_https | ternary('true', 'false') }}
+
+{% if cockpit_allowed_origins %}
+# Allowed WebSocket origins
+Origins = {{ cockpit_allowed_origins }}
+{% endif %}
+
+# Session idle timeout (minutes, 0 = no timeout)
+IdleTimeout = {{ cockpit_idle_timeout }}
+
+[Session]
+# Idle timeout matches WebService setting
+IdleTimeout = {{ cockpit_idle_timeout }}

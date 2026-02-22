@@ -1,0 +1,41 @@
+---
+# Auto-provision dashboards via file-based provisioning
+
+- name: Create dashboard provisioning directory
+  file:
+    path: /etc/grafana/provisioning/dashboards
+    state: directory
+    owner: root
+    group: grafana
+    mode: '0755'
+
+- name: Deploy dashboard provider config
+  template:
+    src: dashboards/dashboard-provider.yml.j2
+    dest: /etc/grafana/provisioning/dashboards/vault.yml
+    owner: root
+    group: grafana
+    mode: '0640'
+  notify: Restart grafana
+
+- name: Create dashboards directory
+  file:
+    path: "{{ grafana_dashboards_dir }}"
+    state: directory
+    owner: grafana
+    group: grafana
+    mode: '0755'
+
+- name: Deploy Vault Cube dashboards
+  copy:
+    src: "dashboards/{{ item }}"
+    dest: "{{ grafana_dashboards_dir }}/{{ item }}"
+    owner: grafana
+    group: grafana
+    mode: '0644'
+  loop:
+    - vault-overview.json
+    - gpu-monitoring.json
+    - inference-performance.json
+    - system-overview.json
+  notify: Restart grafana

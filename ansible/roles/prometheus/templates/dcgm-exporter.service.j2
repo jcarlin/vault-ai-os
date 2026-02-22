@@ -1,0 +1,26 @@
+# {{ ansible_managed }}
+# NVIDIA DCGM Exporter — GPU metrics for Prometheus
+
+[Unit]
+Description=NVIDIA DCGM Exporter
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+TimeoutStartSec=120
+
+ExecStartPre=-/usr/bin/docker rm -f dcgm-exporter
+ExecStart=/usr/bin/docker run --rm \
+    --name dcgm-exporter \
+    --gpus all \
+    --cap-add SYS_ADMIN \
+    -p {{ dcgm_exporter_port }}:9400 \
+    {{ dcgm_exporter_image }}
+
+ExecStop=/usr/bin/docker stop dcgm-exporter
+
+[Install]
+WantedBy=multi-user.target

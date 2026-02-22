@@ -1,0 +1,20 @@
+---
+galaxy_info:
+  author: Vault AI Systems
+  description: Install and configure Cockpit web-based system administration
+  company: Vault AI Systems
+  license: MIT
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble  # 24.04 LTS
+
+  galaxy_tags:
+    - monitoring
+    - cockpit
+    - system
+    - administration
+
+dependencies: []

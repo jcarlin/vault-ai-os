@@ -1,0 +1,6 @@
+---
+- name: Restart prometheus for alerts
+  systemd:
+    name: prometheus
+    state: restarted
+  when: not (packer_build | default(false))

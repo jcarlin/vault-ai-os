@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  author: Vault AI Systems
+  description: Prometheus alert rules for Vault Cube monitoring (GPU, disk, RAM, services)
+  company: Vault AI Systems
+  license: MIT
+  min_ansible_version: "2.15"
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble  # 24.04 LTS
+
+  galaxy_tags:
+    - monitoring
+    - prometheus
+    - alerts
+    - gpu
+
+dependencies:
+  - role: prometheus
