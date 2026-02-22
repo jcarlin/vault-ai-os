@@ -1,0 +1,73 @@
+---
+# Vault Backend - Configure Service
+# Generates secrets, deploys env file and systemd unit
+
+# ============================================================================
+# SECRET KEY GENERATION
+# ============================================================================
+
+- name: Generate VAULT_SECRET_KEY if not provided
+  ansible.builtin.command: openssl rand -hex 32
+  register: generated_secret_key
+  changed_when: false
+  when: vault_secret_key | length == 0
+  tags:
+    - backend
+    - backend-config
+
+- name: Set secret key fact
+  ansible.builtin.set_fact:
+    vault_secret_key_actual: "{{ vault_secret_key if vault_secret_key | length > 0 else generated_secret_key.stdout }}"
+  tags:
+    - backend
+    - backend-config
+
+# ============================================================================
+# ENVIRONMENT FILE
+# ============================================================================
+
+- name: Deploy backend environment file
+  ansible.builtin.template:
+    src: vault-backend.env.j2
+    dest: "{{ vault_backend_config_dir }}/vault-backend.env"
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0600'
+  notify: Restart vault-backend
+  tags:
+    - backend
+    - backend-config
+
+# ============================================================================
+# SYSTEMD SERVICE
+# ============================================================================
+
+- name: Deploy vault-backend systemd unit
+  ansible.builtin.template:
+    src: vault-backend.service.j2
+    dest: /etc/systemd/system/vault-backend.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart vault-backend
+  tags:
+    - backend
+    - backend-config
+
+- name: Enable vault-backend service
+  ansible.builtin.systemd:
+    name: vault-backend
+    enabled: yes
+    daemon_reload: yes
+  tags:
+    - backend
+    - backend-config
+
+- name: Start vault-backend service
+  ansible.builtin.systemd:
+    name: vault-backend
+    state: started
+  when: not (packer_build | default(false))
+  tags:
+    - backend
+    - backend-config

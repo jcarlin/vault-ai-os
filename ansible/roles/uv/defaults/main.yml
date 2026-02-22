@@ -1,0 +1,9 @@
+---
+# uv Role - Default Variables
+# Installs the uv Python package manager as a standalone binary
+
+# Install location for uv binary
+uv_install_dir: /usr/local/bin
+
+# Installer URL (official Astral installer)
+uv_installer_url: "https://astral.sh/uv/install.sh"

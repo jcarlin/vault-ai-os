@@ -1,0 +1,19 @@
+# Vault AI Frontend (Next.js)
+# Managed by Ansible — do not edit manually
+
+[Unit]
+Description=Vault AI Frontend (Next.js)
+After=network.target vault-backend.service
+
+[Service]
+Type=exec
+User={{ vault_user }}
+WorkingDirectory={{ vault_frontend_dir }}
+EnvironmentFile=/opt/vault/config/vault-frontend.env
+ExecStart=/usr/bin/node node_modules/.bin/next start \
+    --hostname 0.0.0.0 --port {{ vault_frontend_port }}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

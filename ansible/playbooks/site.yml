@@ -27,6 +27,12 @@
     - role: python
       tags: ['python']
 
+    - role: uv
+      tags: ['uv', 'python']
+
+    - role: nodejs
+      tags: ['nodejs']
+
   post_tasks:
     - name: Display completion message
       debug:
@@ -38,6 +44,9 @@
           - "Installed components:"
           - "  • Docker Engine configured for GPU container support"
           - "  • Python 3.12 with ML build dependencies (30% faster than 3.10)"
+          - "  • uv package manager for Python dependency management"
+          - "  • Node.js LTS with npm for frontend builds"
           - "  • System packages and networking configured"
           - ""
           - "Ready for AI framework installation (NVIDIA drivers, PyTorch, TensorFlow, vLLM)"
+          - "Ready for application deployment (run app.yml after gpu.yml)"

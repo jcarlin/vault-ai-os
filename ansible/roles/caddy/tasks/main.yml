@@ -1,0 +1,135 @@
+---
+# Caddy Role - Main Tasks
+# Installs Caddy as a reverse proxy for TLS termination
+# Routes API traffic to backend, everything else to frontend
+
+# ============================================================================
+# PREREQUISITES
+# ============================================================================
+
+- name: Install prerequisites for Caddy repository
+  ansible.builtin.apt:
+    name:
+      - debian-archive-keyring
+      - apt-transport-https
+      - curl
+    state: present
+    update_cache: yes
+  tags:
+    - caddy
+
+# ============================================================================
+# CADDY REPOSITORY SETUP
+# ============================================================================
+
+- name: Create keyrings directory
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: '0755'
+  tags:
+    - caddy
+
+- name: Download Caddy GPG key
+  ansible.builtin.shell: >
+    curl -fsSL {{ caddy_gpg_key_url }}
+    | gpg --dearmor -o {{ caddy_keyring_path }}
+  args:
+    creates: "{{ caddy_keyring_path }}"
+  tags:
+    - caddy
+
+- name: Set permissions on Caddy keyring
+  ansible.builtin.file:
+    path: "{{ caddy_keyring_path }}"
+    mode: '0644'
+  tags:
+    - caddy
+
+- name: Add Caddy apt repository
+  ansible.builtin.apt_repository:
+    repo: "{{ caddy_apt_repository }}"
+    state: present
+    filename: caddy-stable
+    update_cache: yes
+  tags:
+    - caddy
+
+# ============================================================================
+# INSTALLATION
+# ============================================================================
+
+- name: Install Caddy
+  ansible.builtin.apt:
+    name: caddy
+    state: present
+    update_cache: yes
+  tags:
+    - caddy
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
+- name: Deploy Caddyfile
+  ansible.builtin.template:
+    src: Caddyfile.j2
+    dest: /etc/caddy/Caddyfile
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart caddy
+  tags:
+    - caddy
+
+# ============================================================================
+# SERVICE MANAGEMENT
+# ============================================================================
+
+- name: Enable caddy service
+  ansible.builtin.systemd:
+    name: caddy
+    enabled: yes
+    daemon_reload: yes
+  tags:
+    - caddy
+
+- name: Start caddy service
+  ansible.builtin.systemd:
+    name: caddy
+    state: started
+  when: not (packer_build | default(false))
+  tags:
+    - caddy
+
+# ============================================================================
+# VALIDATION
+# ============================================================================
+
+- name: Validate Caddyfile syntax
+  ansible.builtin.command: caddy validate --config /etc/caddy/Caddyfile
+  register: caddy_validate
+  changed_when: false
+  tags:
+    - caddy
+    - verify
+
+- name: Verify Caddy installation
+  ansible.builtin.command: caddy version
+  register: caddy_version_output
+  changed_when: false
+  tags:
+    - caddy
+    - verify
+
+- name: Display Caddy installation summary
+  ansible.builtin.debug:
+    msg:
+      - "Caddy installed: {{ caddy_version_output.stdout }}"
+      - "Caddyfile validation: {{ 'PASSED' if caddy_validate.rc == 0 else 'FAILED' }}"
+      - "HTTPS on :{{ caddy_https_port }} with internal TLS (self-signed)"
+      - "Backend proxy: {{ caddy_backend_url }}"
+      - "Frontend proxy: {{ caddy_frontend_url }}"
+  tags:
+    - caddy
+    - verify

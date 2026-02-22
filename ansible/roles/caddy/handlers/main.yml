@@ -1,0 +1,15 @@
+---
+# Caddy Role - Handlers
+
+- name: Restart caddy
+  ansible.builtin.systemd:
+    name: caddy
+    state: restarted
+    daemon_reload: yes
+  when: not (packer_build | default(false))
+
+- name: Reload caddy
+  ansible.builtin.systemd:
+    name: caddy
+    state: reloaded
+  when: not (packer_build | default(false))

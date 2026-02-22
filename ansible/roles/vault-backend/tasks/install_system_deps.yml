@@ -1,0 +1,12 @@
+---
+# Vault Backend - Install System Dependencies
+# Libraries required by Python packages (python-magic, pikepdf, Pillow)
+
+- name: Install system libraries for backend Python packages
+  ansible.builtin.apt:
+    name: "{{ vault_backend_system_deps }}"
+    state: present
+    update_cache: yes
+  tags:
+    - backend
+    - backend-deps

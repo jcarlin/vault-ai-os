@@ -1,0 +1,95 @@
+---
+# Application Playbook - Vault Cube Application Stack
+# Deploys backend (FastAPI), frontend (Next.js), and reverse proxy (Caddy)
+#
+# Prerequisites: site.yml (base system + Node.js + uv) and gpu.yml (GPU stack)
+#
+# Usage (local, on the Cube itself):
+#   sudo ansible-playbook -i localhost, -c local playbooks/app.yml -vv
+#
+# Usage (remote, over SSH):
+#   ansible-playbook -i inventory/cube.yml playbooks/app.yml -vv
+#
+# Selective runs:
+#   --tags backend    # Backend only
+#   --tags frontend   # Frontend only
+#   --tags caddy      # Reverse proxy only
+
+- name: Deploy Vault Cube Application Stack
+  hosts: all
+  become: true
+  gather_facts: true
+  vars_files:
+    - ../group_vars/all.yml
+
+  pre_tasks:
+    - name: Verify Python 3.12 is available
+      ansible.builtin.command: python3.12 --version
+      register: python_check
+      changed_when: false
+      failed_when: python_check.rc != 0
+      tags: ['always']
+
+    - name: Verify Node.js is available
+      ansible.builtin.command: node --version
+      register: node_check
+      changed_when: false
+      failed_when: node_check.rc != 0
+      tags: ['always']
+
+    - name: Verify uv is available
+      ansible.builtin.command: /usr/local/bin/uv --version
+      register: uv_check
+      changed_when: false
+      failed_when: uv_check.rc != 0
+      tags: ['always']
+
+    - name: Display pre-flight results
+      ansible.builtin.debug:
+        msg:
+          - "Pre-flight checks passed:"
+          - "  Python: {{ python_check.stdout }}"
+          - "  Node.js: {{ node_check.stdout }}"
+          - "  uv: {{ uv_check.stdout }}"
+      tags: ['always']
+
+  roles:
+    - role: vault-backend
+      tags: ['backend']
+
+    - role: vault-frontend
+      tags: ['frontend']
+
+    - role: caddy
+      tags: ['caddy']
+
+  post_tasks:
+    - name: Display deployment summary
+      ansible.builtin.debug:
+        msg:
+          - ""
+          - "============================================"
+          - "  Vault Cube Application Stack Deployed"
+          - "============================================"
+          - ""
+          - "Services:"
+          - "  vault-backend   → FastAPI on :{{ vault_backend_port | default(8000) }}"
+          - "  vault-frontend  → Next.js on :{{ vault_frontend_port | default(3001) }}"
+          - "  caddy           → HTTPS on :443 (self-signed TLS)"
+          - ""
+          - "Access:"
+          - "  https://vault-cube.local     # Web UI + API (via Caddy)"
+          - "  http://localhost:8000        # Backend direct"
+          - "  http://localhost:3001        # Frontend direct"
+          - ""
+          - "Service management:"
+          - "  systemctl status vault-backend"
+          - "  systemctl status vault-frontend"
+          - "  systemctl status caddy"
+          - ""
+          - "Logs:"
+          - "  journalctl -u vault-backend -f"
+          - "  journalctl -u vault-frontend -f"
+          - "  journalctl -u caddy -f"
+          - ""
+      tags: ['always']

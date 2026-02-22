@@ -1,0 +1,51 @@
+---
+# Vault Backend - Validate Deployment
+# Checks that the service is running and responding
+
+- name: Check vault-backend service status
+  ansible.builtin.systemd:
+    name: vault-backend
+  register: backend_service_status
+  when: not (packer_build | default(false))
+  tags:
+    - backend
+    - backend-validate
+
+- name: Verify backend venv has uvicorn
+  ansible.builtin.command: "{{ vault_backend_venv }}/bin/python -c 'import uvicorn; print(uvicorn.__version__)'"
+  register: uvicorn_check
+  changed_when: false
+  failed_when: false
+  tags:
+    - backend
+    - backend-validate
+
+- name: Wait for backend to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ vault_backend_port }}/vault/health"
+    return_content: yes
+    status_code: [200, 503]
+  register: health_check
+  retries: 5
+  delay: 3
+  until: health_check is succeeded
+  when: not (packer_build | default(false))
+  ignore_errors: yes
+  tags:
+    - backend
+    - backend-validate
+
+- name: Display backend deployment summary
+  ansible.builtin.debug:
+    msg:
+      - "Vault Backend deployment:"
+      - "  App directory: {{ vault_backend_dir }}"
+      - "  Virtual env: {{ vault_backend_venv }}"
+      - "  Data directory: {{ vault_backend_data_dir }}"
+      - "  Port: {{ vault_backend_port }}"
+      - "  uvicorn: {{ uvicorn_check.stdout | default('not installed — source not yet deployed') }}"
+      - "  Service: {{ 'running' if not (packer_build | default(false)) and backend_service_status is defined and backend_service_status.status is defined else 'enabled (will start on boot)' }}"
+      - "  Health: {{ health_check.json | default('skipped during image build') }}"
+  tags:
+    - backend
+    - backend-validate

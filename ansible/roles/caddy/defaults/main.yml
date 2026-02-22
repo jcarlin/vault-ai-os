@@ -1,0 +1,19 @@
+---
+# Caddy Role - Default Variables
+# Installs Caddy reverse proxy for TLS termination
+
+# Caddy repository configuration
+caddy_gpg_key_url: "https://dl.cloudsmith.io/public/caddy/stable/gpg.key"
+caddy_keyring_path: "/usr/share/keyrings/caddy-stable-archive-keyring.gpg"
+caddy_apt_repository: "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.gpg] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main"
+
+# Service ports
+caddy_https_port: 443
+caddy_http_port: 80
+
+# Backend service URLs
+caddy_backend_url: "localhost:8000"
+caddy_frontend_url: "localhost:3001"
+
+# Hostname for TLS certificate
+caddy_hostname: "vault-cube.local"

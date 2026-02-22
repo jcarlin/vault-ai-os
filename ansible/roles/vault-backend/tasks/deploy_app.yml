@@ -1,0 +1,122 @@
+---
+# Vault Backend - Deploy Application
+# Creates directories, copies source, installs Python dependencies
+
+# ============================================================================
+# DIRECTORY SETUP
+# ============================================================================
+
+- name: Create backend application directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0755'
+  loop:
+    - "{{ vault_backend_dir }}"
+    - "{{ vault_backend_data_dir }}"
+    - "{{ vault_backend_config_dir }}"
+    - "{{ vault_backend_tls_dir }}"
+    - "{{ vault_backend_models_dir }}"
+    - "{{ vault_backend_quarantine_dir }}"
+    - "{{ vault_backend_log_dir }}"
+  tags:
+    - backend
+    - backend-deploy
+
+# ============================================================================
+# SOURCE CODE
+# ============================================================================
+
+- name: Copy backend source to {{ vault_backend_dir }}
+  ansible.builtin.synchronize:
+    src: "{{ vault_backend_source }}/"
+    dest: "{{ vault_backend_dir }}/"
+    delete: yes
+    rsync_opts:
+      - "--exclude=.git"
+      - "--exclude=__pycache__"
+      - "--exclude=.pytest_cache"
+      - "--exclude=*.pyc"
+      - "--exclude=.venv"
+      - "--exclude=data/"
+      - "--exclude=.env"
+  when: vault_backend_source | length > 0
+  tags:
+    - backend
+    - backend-deploy
+
+# ============================================================================
+# PYTHON VIRTUAL ENVIRONMENT
+# ============================================================================
+
+- name: Create backend Python virtual environment
+  ansible.builtin.command: python3.12 -m venv {{ vault_backend_venv }}
+  args:
+    creates: "{{ vault_backend_venv }}/bin/python"
+  tags:
+    - backend
+    - backend-deploy
+
+- name: Install backend Python dependencies with uv
+  ansible.builtin.command: >
+    /usr/local/bin/uv sync --frozen --no-dev
+  args:
+    chdir: "{{ vault_backend_dir }}"
+  environment:
+    VIRTUAL_ENV: "{{ vault_backend_venv }}"
+  when: vault_backend_source | length > 0
+  register: uv_sync_result
+  changed_when: "'Installing' in uv_sync_result.stdout | default('')"
+  tags:
+    - backend
+    - backend-deploy
+
+# ============================================================================
+# CONFIGURATION FILES
+# ============================================================================
+
+- name: Copy model manifest to config directory
+  ansible.builtin.copy:
+    src: "{{ vault_backend_dir }}/config/models.json"
+    dest: "{{ vault_backend_config_dir }}/models.json"
+    remote_src: yes
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0644'
+    force: no
+  when: vault_backend_source | length > 0
+  ignore_errors: yes
+  tags:
+    - backend
+    - backend-deploy
+
+- name: Copy GPU config to config directory
+  ansible.builtin.copy:
+    src: "{{ vault_backend_dir }}/config/gpu-config.yaml"
+    dest: "{{ vault_backend_config_dir }}/gpu-config.yaml"
+    remote_src: yes
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0644'
+    force: no
+  when: vault_backend_source | length > 0
+  ignore_errors: yes
+  tags:
+    - backend
+    - backend-deploy
+
+# ============================================================================
+# OWNERSHIP
+# ============================================================================
+
+- name: Set ownership on backend venv
+  ansible.builtin.file:
+    path: "{{ vault_backend_venv }}"
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    recurse: yes
+  tags:
+    - backend
+    - backend-deploy

@@ -1,0 +1,9 @@
+---
+# Vault Backend Role - Handlers
+
+- name: Restart vault-backend
+  ansible.builtin.systemd:
+    name: vault-backend
+    state: restarted
+    daemon_reload: yes
+  when: not (packer_build | default(false))

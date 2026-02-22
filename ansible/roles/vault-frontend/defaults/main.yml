@@ -1,0 +1,14 @@
+---
+# Vault Frontend Role - Default Variables
+# Deploys the Next.js frontend as a systemd service
+
+# Application directory
+vault_frontend_dir: /opt/vault/frontend
+
+# Service configuration
+vault_frontend_port: 3001        # 3000 is taken by Grafana
+vault_frontend_backend_url: "http://localhost:8000"
+
+# Frontend source location during Packer build
+# Override this in your Packer variables or group_vars
+vault_frontend_source: ""

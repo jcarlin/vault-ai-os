@@ -1,0 +1,48 @@
+# Vault Cube Reverse Proxy
+# Managed by Ansible — do not edit manually
+#
+# Routes:
+#   /v1/*      → Backend API (FastAPI :{{ caddy_backend_url | regex_replace('.*:', '') }})
+#   /vault/*   → Backend API
+#   /ws/*      → Backend WebSocket
+#   /metrics   → Backend Prometheus metrics
+#   /*         → Frontend (Next.js :{{ caddy_frontend_url | regex_replace('.*:', '') }})
+
+:{{ caddy_https_port }} {
+	tls internal
+
+	# Security headers
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Backend API routes
+	handle /v1/* {
+		reverse_proxy {{ caddy_backend_url }}
+	}
+
+	handle /vault/* {
+		reverse_proxy {{ caddy_backend_url }}
+	}
+
+	handle /ws/* {
+		reverse_proxy {{ caddy_backend_url }}
+	}
+
+	handle /metrics {
+		reverse_proxy {{ caddy_backend_url }}
+	}
+
+	# Frontend (everything else)
+	handle {
+		reverse_proxy {{ caddy_frontend_url }}
+	}
+}
+
+# HTTP → HTTPS redirect
+:{{ caddy_http_port }} {
+	redir https://{host}{uri} permanent
+}

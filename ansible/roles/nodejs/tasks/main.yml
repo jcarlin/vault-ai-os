@@ -1,0 +1,97 @@
+---
+# Node.js Role - Main Tasks
+# Installs Node.js v20 LTS from the NodeSource apt repository
+# Required by: Frontend (Next.js build & serve)
+
+# ============================================================================
+# PREREQUISITES
+# ============================================================================
+
+- name: Install prerequisites for NodeSource repository
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: yes
+  tags:
+    - nodejs
+
+# ============================================================================
+# NODESOURCE REPOSITORY SETUP
+# ============================================================================
+
+- name: Create keyrings directory
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: '0755'
+  tags:
+    - nodejs
+
+- name: Download NodeSource GPG key
+  ansible.builtin.shell: >
+    curl -fsSL {{ nodejs_gpg_key_url }}
+    | gpg --dearmor -o {{ nodejs_keyring_path }}
+  args:
+    creates: "{{ nodejs_keyring_path }}"
+  tags:
+    - nodejs
+
+- name: Set permissions on NodeSource keyring
+  ansible.builtin.file:
+    path: "{{ nodejs_keyring_path }}"
+    mode: '0644'
+  tags:
+    - nodejs
+
+- name: Add NodeSource apt repository
+  ansible.builtin.apt_repository:
+    repo: "{{ nodejs_apt_repository }}"
+    state: present
+    filename: nodesource
+    update_cache: yes
+  tags:
+    - nodejs
+
+# ============================================================================
+# INSTALLATION
+# ============================================================================
+
+- name: Install Node.js {{ nodejs_major_version }}.x
+  ansible.builtin.apt:
+    name: nodejs
+    state: present
+    update_cache: yes
+  tags:
+    - nodejs
+
+# ============================================================================
+# VALIDATION
+# ============================================================================
+
+- name: Verify Node.js installation
+  ansible.builtin.command: node --version
+  register: node_version_output
+  changed_when: false
+  tags:
+    - nodejs
+    - verify
+
+- name: Verify npm installation
+  ansible.builtin.command: npm --version
+  register: npm_version_output
+  changed_when: false
+  tags:
+    - nodejs
+    - verify
+
+- name: Display Node.js installation summary
+  ansible.builtin.debug:
+    msg:
+      - "Node.js installed: {{ node_version_output.stdout }}"
+      - "npm installed: {{ npm_version_output.stdout }}"
+  tags:
+    - nodejs
+    - verify

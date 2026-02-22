@@ -1,0 +1,52 @@
+---
+# Vault Backend Role - Default Variables
+# Deploys the FastAPI backend as a systemd service
+
+# Application directories
+vault_backend_dir: /opt/vault/backend
+vault_backend_venv: /opt/vault/backend-venv
+vault_backend_data_dir: /opt/vault/data
+vault_backend_config_dir: /opt/vault/config
+vault_backend_tls_dir: /opt/vault/tls
+vault_backend_models_dir: /opt/vault/models
+vault_backend_quarantine_dir: /opt/vault/quarantine
+vault_backend_log_dir: /var/log/vault
+
+# Service configuration
+vault_backend_port: 8000
+vault_backend_workers: 1
+vault_backend_log_level: info
+
+# vLLM backend URL
+vault_vllm_base_url: "http://localhost:8001"
+
+# Database
+vault_db_url: "sqlite+aiosqlite:///opt/vault/data/vault.db"
+
+# CORS
+vault_cors_origins: "https://vault-cube.local"
+
+# Deployment mode
+vault_deployment_mode: cube
+
+# vLLM container name (for model management)
+vault_vllm_container_name: vault-vllm
+
+# Secret key — generated at deploy time if not provided
+vault_secret_key: ""
+
+# Backend source location during Packer build
+# Override this in your Packer variables or group_vars
+vault_backend_source: ""
+
+# System dependencies required by Python packages
+vault_backend_system_deps:
+  - libmagic1
+  - libmagic-dev
+  - libqpdf-dev
+  - libjpeg-dev
+  - libpng-dev
+  - libtiff-dev
+  - libwebp-dev
+  - zlib1g-dev
+  - sqlite3

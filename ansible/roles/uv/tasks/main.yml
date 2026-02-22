@@ -1,0 +1,43 @@
+---
+# uv Role - Main Tasks
+# Installs the uv Python package manager as a standalone binary
+# Required by: Backend (uv sync for Python dependency management)
+
+# ============================================================================
+# INSTALLATION
+# ============================================================================
+
+- name: Check if uv is already installed
+  ansible.builtin.stat:
+    path: "{{ uv_install_dir }}/uv"
+  register: uv_binary
+  tags:
+    - uv
+
+- name: Install uv via official installer
+  ansible.builtin.shell: >
+    curl -LsSf {{ uv_installer_url }} | CARGO_HOME=/usr/local sh
+  args:
+    creates: "{{ uv_install_dir }}/uv"
+  when: not uv_binary.stat.exists
+  tags:
+    - uv
+
+# ============================================================================
+# VALIDATION
+# ============================================================================
+
+- name: Verify uv installation
+  ansible.builtin.command: "{{ uv_install_dir }}/uv --version"
+  register: uv_version_output
+  changed_when: false
+  tags:
+    - uv
+    - verify
+
+- name: Display uv version
+  ansible.builtin.debug:
+    msg: "uv installed: {{ uv_version_output.stdout }}"
+  tags:
+    - uv
+    - verify

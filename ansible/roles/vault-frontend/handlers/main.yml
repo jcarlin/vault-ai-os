@@ -1,0 +1,9 @@
+---
+# Vault Frontend Role - Handlers
+
+- name: Restart vault-frontend
+  ansible.builtin.systemd:
+    name: vault-frontend
+    state: restarted
+    daemon_reload: yes
+  when: not (packer_build | default(false))

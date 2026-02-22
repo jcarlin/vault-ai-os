@@ -1,0 +1,155 @@
+---
+# Vault Frontend Role - Main Tasks
+# Deploys the Next.js frontend as a systemd service
+
+# ============================================================================
+# DEPLOY APPLICATION
+# ============================================================================
+
+- name: Create frontend application directory
+  ansible.builtin.file:
+    path: "{{ vault_frontend_dir }}"
+    state: directory
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0755'
+  tags:
+    - frontend
+    - frontend-deploy
+
+- name: Copy frontend source to {{ vault_frontend_dir }}
+  ansible.builtin.synchronize:
+    src: "{{ vault_frontend_source }}/"
+    dest: "{{ vault_frontend_dir }}/"
+    delete: yes
+    rsync_opts:
+      - "--exclude=.git"
+      - "--exclude=node_modules"
+      - "--exclude=.next"
+      - "--exclude=.env.local"
+  when: vault_frontend_source | length > 0
+  tags:
+    - frontend
+    - frontend-deploy
+
+- name: Install frontend npm dependencies
+  ansible.builtin.command: npm ci
+  args:
+    chdir: "{{ vault_frontend_dir }}"
+  when: vault_frontend_source | length > 0
+  register: npm_ci_result
+  changed_when: "'added' in npm_ci_result.stdout | default('')"
+  tags:
+    - frontend
+    - frontend-deploy
+
+- name: Build frontend production bundle
+  ansible.builtin.command: npm run build
+  args:
+    chdir: "{{ vault_frontend_dir }}"
+  environment:
+    BACKEND_URL: "{{ vault_frontend_backend_url }}"
+    NODE_ENV: production
+  when: vault_frontend_source | length > 0
+  register: npm_build_result
+  changed_when: true
+  tags:
+    - frontend
+    - frontend-deploy
+
+- name: Set ownership on frontend directory
+  ansible.builtin.file:
+    path: "{{ vault_frontend_dir }}"
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    recurse: yes
+  tags:
+    - frontend
+    - frontend-deploy
+
+# ============================================================================
+# CONFIGURE SERVICE
+# ============================================================================
+
+- name: Deploy frontend environment file
+  ansible.builtin.template:
+    src: vault-frontend.env.j2
+    dest: /opt/vault/config/vault-frontend.env
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0644'
+  notify: Restart vault-frontend
+  tags:
+    - frontend
+    - frontend-config
+
+- name: Deploy vault-frontend systemd unit
+  ansible.builtin.template:
+    src: vault-frontend.service.j2
+    dest: /etc/systemd/system/vault-frontend.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart vault-frontend
+  tags:
+    - frontend
+    - frontend-config
+
+- name: Enable vault-frontend service
+  ansible.builtin.systemd:
+    name: vault-frontend
+    enabled: yes
+    daemon_reload: yes
+  tags:
+    - frontend
+    - frontend-config
+
+- name: Start vault-frontend service
+  ansible.builtin.systemd:
+    name: vault-frontend
+    state: started
+  when: not (packer_build | default(false))
+  tags:
+    - frontend
+    - frontend-config
+
+# ============================================================================
+# VALIDATE
+# ============================================================================
+
+- name: Check vault-frontend service status
+  ansible.builtin.systemd:
+    name: vault-frontend
+  register: frontend_service_status
+  when: not (packer_build | default(false))
+  tags:
+    - frontend
+    - frontend-validate
+
+- name: Wait for frontend to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ vault_frontend_port }}"
+    return_content: no
+    status_code: [200, 301, 302]
+  register: frontend_health
+  retries: 10
+  delay: 3
+  until: frontend_health is succeeded
+  when: not (packer_build | default(false))
+  ignore_errors: yes
+  tags:
+    - frontend
+    - frontend-validate
+
+- name: Display frontend deployment summary
+  ansible.builtin.debug:
+    msg:
+      - "Vault Frontend deployment:"
+      - "  App directory: {{ vault_frontend_dir }}"
+      - "  Port: {{ vault_frontend_port }}"
+      - "  Backend URL: {{ vault_frontend_backend_url }}"
+      - "  Service: {{ 'running' if not (packer_build | default(false)) and frontend_service_status is defined else 'enabled (will start on boot)' }}"
+      - "  Health: {{ 'responding' if frontend_health is defined and frontend_health is succeeded else 'skipped during image build' }}"
+  tags:
+    - frontend
+    - frontend-validate

@@ -1,0 +1,28 @@
+---
+# Vault Backend Role - Main Tasks
+# Deploys the FastAPI API gateway as a systemd service
+# Separate venv from PyTorch to avoid dependency conflicts
+
+- name: Install system dependencies
+  ansible.builtin.include_tasks: install_system_deps.yml
+  tags:
+    - backend
+    - backend-deps
+
+- name: Deploy application
+  ansible.builtin.include_tasks: deploy_app.yml
+  tags:
+    - backend
+    - backend-deploy
+
+- name: Configure service
+  ansible.builtin.include_tasks: configure.yml
+  tags:
+    - backend
+    - backend-config
+
+- name: Validate deployment
+  ansible.builtin.include_tasks: validate.yml
+  tags:
+    - backend
+    - backend-validate
