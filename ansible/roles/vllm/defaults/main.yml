@@ -14,7 +14,7 @@
 vllm_install_method: "ngc_container"
 
 # NGC Container — recommended for RTX 5090
-vllm_ngc_image: "nvcr.io/nvidia/vllm:25.09"
+vllm_ngc_image: "nvcr.io/nvidia/vllm:26.01-py3"
 vllm_ngc_container_name: "vllm-server"
 
 # vLLM environment variables (required for Blackwell)
