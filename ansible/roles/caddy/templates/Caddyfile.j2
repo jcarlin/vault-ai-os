@@ -8,7 +8,7 @@
 #   /metrics   → Backend Prometheus metrics
 #   /*         → Frontend (Next.js :{{ caddy_frontend_url | regex_replace('.*:', '') }})
 
-:{{ caddy_https_port }} {
+{{ caddy_hostname }}, localhost {
 	tls internal
 
 	# Security headers
