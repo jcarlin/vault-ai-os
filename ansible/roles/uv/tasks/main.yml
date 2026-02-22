@@ -16,7 +16,7 @@
 
 - name: Install uv via official installer
   ansible.builtin.shell: >
-    curl -LsSf {{ uv_installer_url }} | CARGO_HOME=/usr/local sh
+    curl -LsSf {{ uv_installer_url }} | UV_UNMANAGED_INSTALL={{ uv_install_dir }} sh
   args:
     creates: "{{ uv_install_dir }}/uv"
   when: not uv_binary.stat.exists
