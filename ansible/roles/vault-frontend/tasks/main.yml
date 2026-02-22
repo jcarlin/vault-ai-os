@@ -27,22 +27,34 @@
       - "--exclude=node_modules"
       - "--exclude=.next"
       - "--exclude=.env.local"
+      - "--exclude=next-env.d.ts"
       - "--chown={{ vault_user }}:{{ vault_user }}"
   when: vault_frontend_source | length > 0
+  register: frontend_rsync_result
   tags:
     - frontend
     - frontend-deploy
+
+- name: Check if node_modules exists
+  ansible.builtin.stat:
+    path: "{{ vault_frontend_dir }}/node_modules/.package-lock.json"
+  register: node_modules_lock
 
 - name: Install frontend npm dependencies
   ansible.builtin.command: npm ci
   args:
     chdir: "{{ vault_frontend_dir }}"
-  when: vault_frontend_source | length > 0
+  when: vault_frontend_source | length > 0 and not node_modules_lock.stat.exists
   register: npm_ci_result
   changed_when: "'added' in npm_ci_result.stdout | default('')"
   tags:
     - frontend
     - frontend-deploy
+
+- name: Check if build output exists
+  ansible.builtin.stat:
+    path: "{{ vault_frontend_dir }}/.next/BUILD_ID"
+  register: next_build_output
 
 - name: Build frontend production bundle
   ansible.builtin.command: npm run build
@@ -51,7 +63,7 @@
   environment:
     BACKEND_URL: "{{ vault_frontend_backend_url }}"
     NODE_ENV: production
-  when: vault_frontend_source | length > 0
+  when: vault_frontend_source | length > 0 and (not next_build_output.stat.exists or (npm_ci_result is defined and npm_ci_result is changed))
   register: npm_build_result
   changed_when: true
   tags:
