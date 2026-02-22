@@ -106,7 +106,7 @@ sudo ansible-playbook -i localhost, -c local playbooks/gpu.yml -vv
 ## 5. Validate
 
 ```bash
-# Quick check — should show 4x RTX 5090
+# Quick check — should show your RTX 5090 GPU(s) (1x if single GPU, 2x when second is installed)
 nvidia-smi
 
 # Full validation (driver, CUDA, temps, PCIe, kernel)
@@ -117,11 +117,27 @@ python3.12 ~/scripts/test-pytorch-ddp.py
 ```
 
 **Expected nvidia-smi output:**
-- 4 GPUs listed (RTX 5090)
+- 1–2 GPUs listed (RTX 5090 FE — depends on how many are installed)
 - Driver: 570.x+
 - CUDA: 12.8
 
 ## 6. Test vLLM inference
+
+**Option A: NGC container (recommended for Blackwell/RTX 5090)**
+
+```bash
+# Use the convenience script installed by the vllm Ansible role:
+vllm-serve Qwen/Qwen2.5-32B-Instruct-AWQ
+
+# Or run the container directly:
+docker run --rm --gpus all -p 8001:8000 \
+  nvcr.io/nvidia/vllm-inference:26.01-py3 \
+  --model Qwen/Qwen2.5-32B-Instruct-AWQ \
+  --tensor-parallel-size 1 \
+  --gpu-memory-utilization 0.9
+```
+
+**Option B: Direct Python (if not using NGC container)**
 
 ```bash
 python3.12 -m vllm.entrypoints.openai.api_server \
@@ -138,6 +154,24 @@ curl http://localhost:8001/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"Qwen/Qwen2.5-32B-Instruct-AWQ","messages":[{"role":"user","content":"Hello"}]}'
 ```
+
+---
+
+## GCP Validation Results (Feb 21, 2026)
+
+Full GPU stack validated on GCP L4 instance (closest available GPU to Blackwell architecture):
+
+| Check | Result |
+|-------|--------|
+| NVIDIA driver 570 | ✅ Installed, nvidia-smi working |
+| CUDA 12.8 | ✅ nvcc reports correct version |
+| Container Toolkit | ✅ Docker GPU passthrough working |
+| PyTorch 2.10+cu128 | ✅ torch.cuda.is_available() = True |
+| TensorFlow (NGC) | ✅ GPU detected via NGC container |
+| vLLM (NGC 26.01-py3) | ✅ Server starts, serves inference |
+| All roles idempotent | ✅ Second run shows 0 changes |
+
+One bug fixed during testing: vLLM NGC container tag corrected from `25.04-py3` to `26.01-py3`.
 
 ---
 

@@ -5,53 +5,74 @@ Automated golden image creation for Vault AI Systems Cube workstation platform.
 ## Project Overview
 
 This repository contains Packer templates and Ansible playbooks for building production-ready golden images for the Vault Cube AI workstation featuring:
-- 4× NVIDIA RTX 5090 GPUs
+- 2× NVIDIA RTX 5090 FE (1 currently installed)
 - AMD Threadripper PRO 7975WX (32-core/64-thread)
 - 256GB DDR5 ECC RAM
-- Ubuntu 22.04 LTS
+- Ubuntu 24.04 LTS
 
 ## Current Status
 
-**Phase:** Epic 1a - Demo Box Operation (Foundation)
-**Progress:** Week 1 - Packer + Ansible Base System Complete
+**Phase:** Stage 2 — GPU stack validated, ready for Cube deployment
 
-**Completed:**
-- ✅ Task 1a.1: Development environment setup
-- ✅ Task 1a.2: Git repository structure
-- ✅ Task 1a.3: Packer template (builds .ova successfully)
-- ✅ Task 1a.4: Ansible base system (common, users, packages, networking)
-- ✅ Task 1a.5: Ansible security hardening (SSH, UFW, fail2ban, auto-updates)
+| Component | Status | Details |
+|-----------|--------|---------|
+| Base image (Packer + Ansible `site.yml`) | ✅ | Ubuntu 24.04, common/users/packages/networking/security |
+| Docker + Python 3.12 | ✅ | Docker Engine + Python role |
+| GPU stack (`gpu.yml`) | ✅ | Validated on GCP (Feb 21, 2026) |
+| NVIDIA Driver 570 + CUDA 12.8 | ✅ | Open-source driver, kernel 6.13 |
+| NVIDIA Container Toolkit | ✅ | Docker GPU passthrough working |
+| PyTorch 2.10+cu128 | ✅ | GPU-accelerated via pip |
+| TensorFlow (NGC container) | ✅ | `nvcr.io/nvidia/tensorflow:24.09-tf2-py3` |
+| vLLM 0.13.0 (NGC container) | ✅ | `nvcr.io/nvidia/vllm-inference:26.01-py3` |
+| Security hardening | ✅ | SSH, UFW, fail2ban, sysctl |
+| All roles idempotent | ✅ | Run 3×, 0 changes on runs 2-3 |
 
-**Next:**
-- 📋 Task 1a.6: Docker installation
-- 📋 Task 1a.7: Python environment
-- ⏸️ Task 1a.8+: NVIDIA drivers (blocked until GPU hardware arrives)
+**Next:** Deploy API gateway on the Cube, swap mock for real vLLM, end-to-end test.
 
 ## Repository Structure
 
 ```
 .
-├── packer/              # Packer templates for image building
-│   ├── ubuntu-22.04-demo-box.pkr.hcl    # Main Packer template
+├── packer/                      # Packer templates for image building
+│   ├── ubuntu-22.04-demo-box.pkr.hcl    # Ubuntu 22.04 VirtualBox template
+│   ├── ubuntu-24.04/                     # Ubuntu 24.04 templates
+│   │   ├── ubuntu-24.04-demo-box.pkr.hcl         # Local (VirtualBox)
+│   │   ├── ubuntu-24.04-baremetal.pkr.hcl         # Bare metal (QEMU)
+│   │   └── ubuntu-24.04-gcp.pkr.hcl              # GCP custom image
 │   ├── http/                             # Cloud-init autoinstall files
 │   └── output-*/                         # Build artifacts (.ova files)
-├── ansible/             # Ansible playbooks and roles
+├── ansible/                     # Ansible playbooks and roles
 │   ├── playbooks/
-│   │   └── site.yml                      # Master playbook
+│   │   ├── site.yml                      # Base system playbook
+│   │   └── gpu.yml                       # GPU stack playbook
 │   ├── roles/
 │   │   ├── common/                       # Base system config
 │   │   ├── users/                        # User management
 │   │   ├── security/                     # SSH/firewall/fail2ban
 │   │   ├── packages/                     # Package installation
-│   │   └── networking/                   # Network configuration
+│   │   ├── networking/                   # Network configuration
+│   │   ├── docker/                       # Docker Engine
+│   │   ├── python/                       # Python 3.12
+│   │   ├── nvidia/                       # NVIDIA driver + CUDA
+│   │   ├── nvidia-container-toolkit/     # Docker GPU access
+│   │   ├── pytorch/                      # PyTorch with CUDA
+│   │   ├── tensorflow/                   # TensorFlow (NGC container)
+│   │   ├── vllm/                         # vLLM (NGC container)
+│   │   └── monitoring-basic/             # nvidia-smi monitoring tools
 │   ├── group_vars/
 │   │   └── all.yml                       # Global variables
-│   └── inventory/                        # Inventory files
-├── scripts/             # Validation and utility scripts
-├── tests/               # Test scripts and validation
-└── docs/                # Documentation
-    ├── epic-1a-demo-box.md               # Current epic documentation
-    └── epic-1b-production-hardening.md   # Next phase
+│   └── inventory/
+│       └── production.yml                # Cube production inventory
+├── scripts/                     # Validation and utility scripts
+│   ├── setup-gcp.sh                      # GCP environment setup
+│   ├── launch-gcp-gpu-test.sh            # Launch GPU test instance
+│   ├── cleanup-gcp-resources.sh          # GCP cleanup
+│   └── validate-gpus.sh                  # GPU validation
+├── docs/                        # Documentation
+│   ├── gpu-deploy-runbook.md             # Step-by-step GPU deployment
+│   ├── hardware-specification-clarifications.md
+│   └── architecture/                     # System architecture docs
+└── tests/                       # Test scripts and validation
 ```
 
 ## Prerequisites
@@ -60,8 +81,8 @@ This repository contains Packer templates and Ansible playbooks for building pro
 
 - **Packer:** 1.14.2+ ([Download](https://www.packer.io/downloads))
 - **Ansible:** 2.19.3+ (Install: `brew install ansible` on macOS)
-- **VirtualBox:** 7.0+ ([Download](https://www.virtualbox.org/))
-- **VBoxManage:** Included with VirtualBox
+- **VirtualBox:** 7.0+ (for local builds) ([Download](https://www.virtualbox.org/))
+- **gcloud CLI:** (for GCP builds)
 
 ### System Requirements
 
@@ -69,378 +90,108 @@ This repository contains Packer templates and Ansible playbooks for building pro
 - **Disk:** 100GB free space for builds and artifacts
 - **CPU:** 4 cores minimum (for VM allocation)
 
-### Required Files
+### Required Files (Local Builds)
 
-- **Ubuntu 22.04.5 LTS ISO:** [Download](https://releases.ubuntu.com/22.04/)
-  - Place in: `/Users/julian/Downloads/ubuntu-22.04.5-live-server-amd64.iso`
-  - Or update `iso_url` variable in Packer template
+- **Ubuntu 24.04 LTS ISO:** [Download](https://releases.ubuntu.com/24.04/)
+- Or use GCP builds which don't require a local ISO
 
 ---
 
 ## Quick Start
 
-### 1. Build Golden Image with Packer
+### Build Base Image with Packer
 
 ```bash
-# Navigate to packer directory
 cd packer
 
-# Validate Packer template
+# Validate and build
 packer validate ubuntu-22.04-demo-box.pkr.hcl
-
-# Build the image (headless=false shows VirtualBox GUI)
 packer build ubuntu-22.04-demo-box.pkr.hcl
 
-# Build time: ~20-30 minutes
-# Output: packer/output-vault-cube-demo-box/vault-cube-demo-box.ova
+# Or Ubuntu 24.04
+cd ubuntu-24.04
+packer build ubuntu-24.04-demo-box.pkr.hcl
 ```
 
-**What Packer does:**
-1. Creates VirtualBox VM (4 CPU, 8GB RAM, 50GB disk)
-2. Boots Ubuntu 22.04 ISO with autoinstall (cloud-init)
-3. Installs base Ubuntu system
-4. Runs provisioners (system updates, cleanup)
-5. Exports .ova file
-
-**Note:** Ansible provisioning is currently disabled in Packer (lines 193-214 commented out). See "Testing Ansible" section below to test roles before enabling in Packer.
-
-### 2. Import and Test the Built Image
+### Deploy GPU Stack on a Running System
 
 ```bash
-# Import .ova into VirtualBox
-VBoxManage import packer/output-vault-cube-demo-box/vault-cube-demo-box.ova
+# Get the code onto the target machine (git clone, scp, or USB)
+cd ansible
 
-# Start the VM
-VBoxManage startvm vault-cube-demo-box
+# First: verify base system is clean
+sudo ansible-playbook -i localhost, -c local playbooks/site.yml -vv
 
-# Or use VirtualBox GUI:
-# 1. Open VirtualBox
-# 2. File → Import Appliance
-# 3. Select the .ova file
-# 4. Click Import and Start
+# Then: install GPU stack (will reboot after driver install)
+sudo ansible-playbook -i localhost, -c local playbooks/gpu.yml -vv
+
+# After reboot: re-run to complete remaining roles
+sudo ansible-playbook -i localhost, -c local playbooks/gpu.yml -vv
 ```
 
-**Default credentials:**
+See `docs/gpu-deploy-runbook.md` for the full step-by-step guide.
+
+### GCP GPU Testing
+
+```bash
+./scripts/setup-gcp.sh              # Setup environment
+./scripts/check-gcp-quotas.sh       # Verify GPU quotas
+./scripts/launch-gcp-gpu-test.sh    # Launch test instance
+./scripts/cleanup-gcp-resources.sh  # Cleanup
+```
+
+### Convenience Scripts (installed by gpu.yml)
+
+```bash
+vllm-serve <model_name>    # Launch vLLM NGC container serving a model
+vllm-shell                 # Interactive shell in vLLM NGC container
+tensorflow-shell           # Interactive shell in TensorFlow NGC container
+```
+
+---
+
+## Default Credentials
+
 - Username: `vaultadmin`
 - Password: `vaultadmin`
-
-**Login via VirtualBox console window** (no SSH setup needed for testing)
-
----
-
-## Testing Ansible Roles
-
-Before enabling Ansible in Packer, test roles manually for faster iteration.
-
-### Method 1: Shared Folder (Recommended)
-
-**Advantages:**
-- ✅ No file copying needed
-- ✅ Edit on Mac, run in VM instantly
-- ✅ Perfect for development iteration
-
-**Steps:**
-
-```bash
-# 1. Power off VM if running
-VBoxManage controlvm vault-cube-demo-box poweroff
-
-# 2. Create shared folder pointing to your ansible directory
-VBoxManage sharedfolder add vault-cube-demo-box \
-  --name ansible-files \
-  --hostpath /Users/julian/dev/vault-ai-systems/cube-golden-image/ansible \
-  --automount \
-  --auto-mount-point /mnt/ansible
-
-# 3. Start VM
-VBoxManage startvm vault-cube-demo-box
-
-# 4. Login to VM (vaultadmin/vaultadmin) and run:
-sudo apt-get update
-sudo apt-get install -y virtualbox-guest-utils ansible build-essential dkms linux-headers-$(uname -r)
-sudo usermod -a -G vboxsf vaultadmin
-sudo reboot
-
-# 5. After reboot, verify shared folder
-ls -la /mnt/ansible
-# Should show: playbooks/, roles/, group_vars/
-
-# 6. Run Ansible playbook
-cd /mnt/ansible
-ansible-playbook -i localhost, -c local playbooks/site.yml
-
-# 7. Verify security hardening
-sudo ufw status verbose        # Should show firewall active
-sudo systemctl status fail2ban # Should show fail2ban running
-cat /etc/ssh/banner           # Should show Vault Cube banner
-```
-
-### Method 2: Direct Git Clone (Alternative)
-
-```bash
-# Inside VM, install git and ansible
-sudo apt-get update
-sudo apt-get install -y git ansible
-
-# Clone repository (if on GitHub)
-git clone https://github.com/vault-ai-systems/cube-golden-image.git
-cd cube-golden-image/ansible
-
-# Run Ansible
-ansible-playbook -i localhost, -c local playbooks/site.yml
-```
-
-### Ansible Testing Commands
-
-```bash
-# Syntax check (no VM required)
-ansible-playbook playbooks/site.yml --syntax-check
-
-# List all tasks
-ansible-playbook playbooks/site.yml --list-tasks
-
-# Dry-run (check mode)
-ansible-playbook -i localhost, -c local playbooks/site.yml --check
-
-# Run specific role only
-ansible-playbook -i localhost, -c local playbooks/site.yml --tags security
-
-# Run with verbose output
-ansible-playbook -i localhost, -c local playbooks/site.yml -vv
-```
-
----
-
-## Enabling Ansible in Packer
-
-Once Ansible roles work correctly, enable in Packer for automated builds:
-
-**Edit `packer/ubuntu-22.04-demo-box.pkr.hcl`:**
-
-```hcl
-# UNCOMMENT lines 193-200: Install Ansible prerequisites
-provisioner "shell" {
-  inline = [
-    "echo 'Installing Python and Ansible prerequisites...'",
-    "sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip python3-apt",
-    "echo 'Prerequisites installed!'"
-  ]
-}
-
-# UNCOMMENT and UPDATE lines 202-214: Ansible provisioning
-provisioner "ansible-local" {
-  playbook_file   = "../ansible/playbooks/site.yml"
-  role_paths      = [
-    "../ansible/roles/common",
-    "../ansible/roles/users",
-    "../ansible/roles/security",    # ADD THIS LINE
-    "../ansible/roles/packages",
-    "../ansible/roles/networking"
-  ]
-  staging_directory = "/tmp/ansible"
-  extra_arguments = [
-    "--extra-vars", "ansible_python_interpreter=/usr/bin/python3"
-  ]
-}
-```
-
-Then rebuild:
-
-```bash
-cd packer
-packer build ubuntu-22.04-demo-box.pkr.hcl
-```
-
----
-
-## VBoxManage Quick Reference
-
-### VM Management
-
-```bash
-# List all VMs
-VBoxManage list vms
-
-# Show VM info
-VBoxManage showvminfo vault-cube-demo-box
-
-# Start VM (GUI window)
-VBoxManage startvm vault-cube-demo-box
-
-# Start VM (headless, no GUI)
-VBoxManage startvm vault-cube-demo-box --type headless
-
-# Power off VM (graceful)
-VBoxManage controlvm vault-cube-demo-box poweroff
-
-# Save VM state (suspend)
-VBoxManage controlvm vault-cube-demo-box savestate
-
-# Delete VM and files
-VBoxManage unregistervm vault-cube-demo-box --delete
-```
-
-### Shared Folders
-
-```bash
-# Add shared folder
-VBoxManage sharedfolder add vault-cube-demo-box \
-  --name my-folder \
-  --hostpath /path/on/host \
-  --automount \
-  --auto-mount-point /mnt/my-folder
-
-# Remove shared folder
-VBoxManage sharedfolder remove vault-cube-demo-box --name my-folder
-
-# List shared folders
-VBoxManage showvminfo vault-cube-demo-box | grep "Shared folders"
-```
-
-### Snapshots
-
-```bash
-# Create snapshot
-VBoxManage snapshot vault-cube-demo-box take "clean-state" \
-  --description "Before Ansible testing"
-
-# List snapshots
-VBoxManage snapshot vault-cube-demo-box list
-
-# Restore snapshot
-VBoxManage snapshot vault-cube-demo-box restore "clean-state"
-
-# Delete snapshot
-VBoxManage snapshot vault-cube-demo-box delete "clean-state"
-```
-
-### Networking (Advanced)
-
-```bash
-# Add port forwarding (SSH example - DEV ONLY, not for production)
-VBoxManage controlvm vault-cube-demo-box natpf1 "ssh,tcp,,2222,,22"
-
-# Remove port forwarding
-VBoxManage controlvm vault-cube-demo-box natpf1 delete ssh
-
-# Show network config
-VBoxManage showvminfo vault-cube-demo-box | grep NIC
-```
 
 ---
 
 ## Development Workflow
 
-### Recommended Iteration Cycle
-
 **Fast Iteration (Ansible changes):**
 1. Edit Ansible roles on your Mac
-2. Boot VM with shared folder
-3. Run ansible-playbook inside VM
+2. Boot VM with shared folder or SSH into Cube
+3. Run `ansible-playbook` inside target
 4. Test changes immediately
-5. Repeat steps 2-4 until working
+5. Repeat
 
 **Full Build (final validation):**
 1. Enable Ansible in Packer template
 2. Run `packer build`
-3. Test resulting .ova
+3. Test resulting image
 4. Commit to git
+
+**GPU Testing (GCP):**
+1. `./scripts/launch-gcp-gpu-test.sh` creates a GPU instance
+2. SSH in, clone repo, run `gpu.yml`
+3. Validate with `nvidia-smi` and convenience scripts
+4. `./scripts/cleanup-gcp-resources.sh` when done
 
 ### Best Practices
 
-- ✅ **Test Ansible manually first** - Faster feedback than rebuilding Packer
-- ✅ **Use VirtualBox snapshots** - Save clean states before testing
-- ✅ **Run Ansible idempotency tests** - Playbook should work when run 3x times
-- ✅ **Check syntax before building** - `packer validate` and `ansible-playbook --syntax-check`
-- ❌ **Don't add dev configs to Packer** - SSH port forwarding, etc. are runtime-only
-
-### Testing Checklist
-
-Before marking a task complete:
-
-```bash
-# 1. Syntax validation
-packer validate packer/ubuntu-22.04-demo-box.pkr.hcl
-ansible-playbook ansible/playbooks/site.yml --syntax-check
-
-# 2. Test Ansible manually (in VM)
-ansible-playbook -i localhost, -c local /mnt/ansible/playbooks/site.yml
-
-# 3. Verify idempotency (run 3x times, should show 0 changes on runs 2-3)
-ansible-playbook -i localhost, -c local /mnt/ansible/playbooks/site.yml
-ansible-playbook -i localhost, -c local /mnt/ansible/playbooks/site.yml
-ansible-playbook -i localhost, -c local /mnt/ansible/playbooks/site.yml
-
-# 4. Full Packer build
-cd packer && packer build ubuntu-22.04-demo-box.pkr.hcl
-
-# 5. Import and test final .ova
-VBoxManage import packer/output-vault-cube-demo-box/vault-cube-demo-box.ova
-VBoxManage startvm vault-cube-demo-box
-# Verify all features work as expected
-```
-
----
-
-## Troubleshooting
-
-### Packer build fails during cloud-init
-
-**Problem:** Ubuntu installer doesn't start autoinstall
-
-**Solution:**
-- Check `packer/http/user-data` syntax
-- Verify HTTP server is accessible (check Packer output)
-- Increase `boot_wait` in Packer template
-
-### Ansible fails with "Permission denied"
-
-**Problem:** Shared folder not accessible
-
-**Solution:**
-```bash
-# Ensure user is in vboxsf group
-sudo usermod -a -G vboxsf vaultadmin
-sudo reboot
-
-# Or mount manually
-sudo mount -t vboxsf ansible-files /mnt/ansible
-```
-
-### VirtualBox Guest Additions won't install
-
-**Problem:** Missing kernel headers
-
-**Solution:**
-```bash
-sudo apt-get update
-sudo apt-get install -y build-essential dkms linux-headers-$(uname -r)
-sudo apt-get install -y virtualbox-guest-utils virtualbox-guest-dkms
-```
-
-### Packer SSH timeout
-
-**Problem:** Packer can't connect via SSH after installation
-
-**Solution:**
-- Check SSH service is running in VM console: `systemctl status ssh`
-- Verify user exists: `cat /etc/passwd | grep vaultadmin`
-- Check cloud-init logs: `sudo cat /var/log/cloud-init.log`
+- Test Ansible manually first — faster than rebuilding Packer
+- Use VirtualBox snapshots — save clean states before testing
+- Run idempotency tests — playbook should work when run 3× times
+- Check syntax before building — `packer validate` and `ansible-playbook --syntax-check`
 
 ---
 
 ## Documentation
 
-- [Epic 1a - Demo Box](docs/epic-1a-demo-box.md) - Current phase detailed tasks
-- [Epic 1b - Production Hardening](docs/epic-1b-production-hardening.md) - Next phase
-- [Security Role README](ansible/roles/security/README.md) - Security hardening details
-- [CLAUDE.md](CLAUDE.md) - Claude Code configuration and SPARC workflow
-
-## Support
-
-- **Issues:** Create GitHub issue with detailed description
-- **Documentation:** See `docs/` directory
-- **Epic Progress:** Track in `docs/epic-1a-demo-box.md`
+- [GPU Deploy Runbook](docs/gpu-deploy-runbook.md) — Step-by-step GPU stack deployment
+- [Hardware Spec Clarifications](docs/hardware-specification-clarifications.md) — Resolved hardware decisions
+- [CLAUDE.md](CLAUDE.md) — Claude Code configuration and build commands
 
 ## License
 
@@ -448,5 +199,4 @@ Proprietary - Vault AI Systems
 
 ---
 
-**Last Updated:** 2025-10-30
-**Epic:** 1a - Demo Box Operation (Week 1 Complete)
+**Last Updated:** 2026-02-21

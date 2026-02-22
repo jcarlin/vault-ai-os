@@ -74,7 +74,7 @@ The system should support three deployment modes, selected at image flash time v
 |-----------|----------|----------------|-------------|
 | **APT packages** | Pre-download all .debs during Packer build; bundle into image. Disable apt repos on target. | +5-10 min build, +2-4GB image | Zero (no apt calls needed) |
 | **Python wheels** | `pip download` all requirements into `/opt/vault/wheels/`; install from local during setup | +2-3 min build, +1-2GB image | Zero |
-| **Docker images** | `docker save` all required images into tarball; `docker load` on target | +5-10 min build, +5-15GB image | Zero |
+| **Docker images** | `docker save` all required images into tarball; `docker load` on target. **Includes NGC containers** (vLLM `nvcr.io/nvidia/vllm-inference:26.01-py3`, TensorFlow `nvcr.io/nvidia/tensorflow:24.09-tf2-py3`) which must be pre-pulled and saved. | +5-10 min build, +5-15GB image | Zero |
 | **NVIDIA/CUDA** | Pre-download .run installers and .deb packages; bundle into image | +3-5 min build, +3-5GB image | Zero |
 
 **Implementation**:
