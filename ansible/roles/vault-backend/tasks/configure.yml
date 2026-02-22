@@ -6,18 +6,40 @@
 # SECRET KEY GENERATION
 # ============================================================================
 
-- name: Generate VAULT_SECRET_KEY if not provided
+- name: Check if backend env file already exists
+  ansible.builtin.stat:
+    path: "{{ vault_backend_config_dir }}/vault-backend.env"
+  register: backend_env_file
+  tags:
+    - backend
+    - backend-config
+
+- name: Read existing secret key from env file
+  ansible.builtin.shell: >
+    grep '^VAULT_SECRET_KEY=' {{ vault_backend_config_dir }}/vault-backend.env | cut -d= -f2
+  register: existing_secret_key
+  changed_when: false
+  when: backend_env_file.stat.exists and vault_secret_key | length == 0
+  tags:
+    - backend
+    - backend-config
+
+- name: Generate VAULT_SECRET_KEY for first deploy
   ansible.builtin.command: openssl rand -hex 32
   register: generated_secret_key
   changed_when: false
-  when: vault_secret_key | length == 0
+  when: vault_secret_key | length == 0 and (not backend_env_file.stat.exists or (existing_secret_key.stdout | default('')) | length == 0)
   tags:
     - backend
     - backend-config
 
 - name: Set secret key fact
   ansible.builtin.set_fact:
-    vault_secret_key_actual: "{{ vault_secret_key if vault_secret_key | length > 0 else generated_secret_key.stdout }}"
+    vault_secret_key_actual: >-
+      {{ vault_secret_key if vault_secret_key | length > 0
+         else (existing_secret_key.stdout | default(''))
+              if backend_env_file.stat.exists and (existing_secret_key.stdout | default('')) | length > 0
+         else generated_secret_key.stdout }}
   tags:
     - backend
     - backend-config

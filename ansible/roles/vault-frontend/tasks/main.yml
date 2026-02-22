@@ -27,6 +27,7 @@
       - "--exclude=node_modules"
       - "--exclude=.next"
       - "--exclude=.env.local"
+      - "--chown={{ vault_user }}:{{ vault_user }}"
   when: vault_frontend_source | length > 0
   tags:
     - frontend
