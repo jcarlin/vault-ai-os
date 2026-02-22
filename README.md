@@ -34,8 +34,7 @@ This repository contains Packer templates and Ansible playbooks for building pro
 ```
 .
 ├── packer/                      # Packer templates for image building
-│   ├── ubuntu-22.04-demo-box.pkr.hcl    # Ubuntu 22.04 VirtualBox template
-│   ├── ubuntu-24.04/                     # Ubuntu 24.04 templates
+│   ├── ubuntu-24.04/                     # Ubuntu 24.04 templates (production)
 │   │   ├── ubuntu-24.04-demo-box.pkr.hcl         # Local (VirtualBox)
 │   │   ├── ubuntu-24.04-baremetal.pkr.hcl         # Bare metal (QEMU)
 │   │   └── ubuntu-24.04-gcp.pkr.hcl              # GCP custom image
@@ -102,14 +101,10 @@ This repository contains Packer templates and Ansible playbooks for building pro
 ### Build Base Image with Packer
 
 ```bash
-cd packer
+cd packer/ubuntu-24.04
 
 # Validate and build
-packer validate ubuntu-22.04-demo-box.pkr.hcl
-packer build ubuntu-22.04-demo-box.pkr.hcl
-
-# Or Ubuntu 24.04
-cd ubuntu-24.04
+packer validate ubuntu-24.04-demo-box.pkr.hcl
 packer build ubuntu-24.04-demo-box.pkr.hcl
 ```
 

@@ -20,9 +20,9 @@ exec -l $SHELL
 ./scripts/check-gcp-quotas.sh
 
 # 4. Build GPU image (45-60 minutes)
-cd packer/ubuntu-22.04
+cd packer/ubuntu-24.04
 packer init .
-packer build -only=cloud-gpu-gcp ubuntu-22.04-demo-box.pkr.hcl
+packer build -only=cloud-gpu-gcp ubuntu-24.04-demo-box.pkr.hcl
 
 # 5. Launch test instance
 cd ..
@@ -120,16 +120,16 @@ cd /Users/julian/dev/vault-ai-systems/cube-golden-image
 ### Option A: Recommended (Preemptible - 60% cheaper)
 
 ```bash
-cd packer/ubuntu-22.04
+cd packer/ubuntu-24.04
 
 # Initialize Packer (download plugins)
 packer init .
 
 # Validate configuration
-packer validate -only=cloud-gpu-gcp ubuntu-22.04-demo-box.pkr.hcl
+packer validate -only=cloud-gpu-gcp ubuntu-24.04-demo-box.pkr.hcl
 
 # Build with preemptible instance
-packer build -only=cloud-gpu-gcp ubuntu-22.04-demo-box.pkr.hcl
+packer build -only=cloud-gpu-gcp ubuntu-24.04-demo-box.pkr.hcl
 ```
 
 **Time:** 45-60 minutes
@@ -138,13 +138,13 @@ packer build -only=cloud-gpu-gcp ubuntu-22.04-demo-box.pkr.hcl
 ### Option B: On-Demand (More reliable)
 
 ```bash
-cd packer/ubuntu-22.04
+cd packer/ubuntu-24.04
 
 # Build with on-demand instance (no risk of termination)
 packer build \
   -var 'gcp_use_preemptible=false' \
   -only=cloud-gpu-gcp \
-  ubuntu-22.04-demo-box.pkr.hcl
+  ubuntu-24.04-demo-box.pkr.hcl
 ```
 
 **Time:** 45-60 minutes
@@ -152,15 +152,15 @@ packer build \
 
 ### What Gets Built
 
-- Ubuntu 22.04 LTS
-- NVIDIA drivers 535+ (Ada Lovelace support)
-- CUDA Toolkit 12.4
-- cuDNN 9.0
+- Ubuntu 24.04 LTS
+- NVIDIA Driver 570 (open-source, Blackwell support)
+- CUDA Toolkit 12.8
+- cuDNN 9.7
 - Docker with GPU runtime
 - Python 3.12
-- PyTorch 2.5+ with CUDA
-- TensorFlow 2.16+ with GPU
-- vLLM for LLM inference
+- PyTorch 2.10+ with CUDA 12.8
+- TensorFlow (NGC container)
+- vLLM 0.13.0 (NGC container)
 - GPU monitoring tools
 
 ---
@@ -331,64 +331,46 @@ gcloud auth list
 
 ## Advanced Usage
 
-### Ubuntu 24.04 with CUDA 12.8 (RTX 5090 Validation)
+### Legacy Ubuntu 22.04 Builds
 
-For testing RTX 5090 / Blackwell architecture compatibility:
-
-```bash
-cd packer/ubuntu-24.04
-
-# Initialize and validate
-packer init .
-packer validate .
-
-# Build Ubuntu 24.04 image with CUDA 12.8, cuDNN 9.7.1
-packer build -only=cloud-gpu-gcp ubuntu-24.04-demo-box.pkr.hcl
-```
-
-**Note:** Ubuntu 24.04 template includes:
-- CUDA 12.8 (required for RTX 5090)
-- cuDNN 9.7.1
-- Kernel 6.13+ upgrade path
-- PyTorch cu128
-- TensorFlow 2.17 NGC container
+The `packer/ubuntu-22.04/` directory contains legacy templates for Ubuntu 22.04 if needed.
 
 ### Multi-GPU Testing (when quota allows)
 
 ```bash
-cd packer/ubuntu-22.04
+cd packer/ubuntu-24.04
 
 # Modify Packer variables for 4 GPUs
 packer build \
   -var 'gcp_gpu_count=4' \
   -var 'gcp_machine_type_build=g2-standard-32' \
   -only=cloud-gpu-gcp \
-  ubuntu-22.04-demo-box.pkr.hcl
+  ubuntu-24.04-demo-box.pkr.hcl
 ```
 
 ### Use Different GPU Type
 
 ```bash
-cd packer/ubuntu-22.04
+cd packer/ubuntu-24.04
 
 # Use T4 GPU (cheaper, older architecture)
 packer build \
   -var 'gcp_gpu_type=nvidia-tesla-t4' \
   -var 'gcp_machine_type_build=n1-standard-4' \
   -only=cloud-gpu-gcp \
-  ubuntu-22.04-demo-box.pkr.hcl
+  ubuntu-24.04-demo-box.pkr.hcl
 ```
 
 ### Build in Different Region
 
 ```bash
-cd packer/ubuntu-22.04
+cd packer/ubuntu-24.04
 
 # Use Europe region
 packer build \
   -var 'gcp_zone=europe-west4-a' \
   -only=cloud-gpu-gcp \
-  ubuntu-22.04-demo-box.pkr.hcl
+  ubuntu-24.04-demo-box.pkr.hcl
 ```
 
 ---

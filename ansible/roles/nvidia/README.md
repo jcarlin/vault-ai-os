@@ -4,13 +4,13 @@ Installs NVIDIA GPU drivers, CUDA toolkit, and cuDNN for multi-GPU AI workloads.
 
 ## Supported Platforms
 
-- Ubuntu 22.04 LTS
+- Ubuntu 24.04 LTS
 - Multi-GPU configurations (2x, 4x, 8x)
 - NVIDIA GPUs: A100, H100, RTX 4090, RTX 5090
 
 ## Requirements
 
-- Ubuntu 22.04 LTS with kernel 6.5+ (for RTX 40 series) or 6.13+ (for RTX 50 series)
+- Ubuntu 24.04 LTS with kernel 6.8+ (for RTX 40 series) or 6.13+ (for RTX 50 series)
 - GCC 12+ (RTX 40 series) or GCC 14 (RTX 50 series)
 - Internet access for package downloads (or local APT mirror)
 - sudo/root access

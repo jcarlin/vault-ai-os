@@ -10,7 +10,7 @@ This role configures Docker to use NVIDIA GPUs by installing the NVIDIA Containe
 
 - Docker installed (`docker` role)
 - NVIDIA drivers installed (`nvidia` role)
-- Ubuntu 22.04 LTS
+- Ubuntu 24.04 LTS
 
 ## Dependencies
 
@@ -32,5 +32,5 @@ This role configures Docker to use NVIDIA GPUs by installing the NVIDIA Containe
 
 ```bash
 # Test Docker GPU access
-docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
+docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu24.04 nvidia-smi
 ```

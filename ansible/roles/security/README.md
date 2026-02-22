@@ -13,7 +13,7 @@ This role implements enterprise-grade security hardening including:
 
 ## Requirements
 
-- Ubuntu 22.04 LTS (Jammy Jellyfish)
+- Ubuntu 24.04 LTS (Noble Numbat)
 - Ansible 2.15+
 - Sudo/root access on target system
 - At least one SSH public key configured in `group_vars/all.yml`
@@ -387,4 +387,4 @@ Contact: engineering@vault-ai-systems.com (placeholder)
 
 **Last Updated:** 2025-10-30
 **Role Version:** 1.0.0
-**Tested On:** Ubuntu 22.04 LTS (Jammy Jellyfish)
+**Tested On:** Ubuntu 24.04 LTS (Noble Numbat)
