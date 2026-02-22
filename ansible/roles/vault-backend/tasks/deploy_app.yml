@@ -59,9 +59,19 @@
     - backend
     - backend-deploy
 
+- name: Generate uv lockfile if missing
+  ansible.builtin.command: /usr/local/bin/uv lock
+  args:
+    chdir: "{{ vault_backend_dir }}"
+    creates: "{{ vault_backend_dir }}/uv.lock"
+  when: vault_backend_source | length > 0
+  tags:
+    - backend
+    - backend-deploy
+
 - name: Install backend Python dependencies with uv
   ansible.builtin.command: >
-    /usr/local/bin/uv sync --frozen --no-dev
+    /usr/local/bin/uv sync --frozen --no-dev --active
   args:
     chdir: "{{ vault_backend_dir }}"
   environment:
