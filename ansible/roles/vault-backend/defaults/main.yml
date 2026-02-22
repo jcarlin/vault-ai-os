@@ -21,7 +21,7 @@ vault_backend_log_level: info
 vault_vllm_base_url: "http://localhost:8001"
 
 # Database
-vault_db_url: "sqlite+aiosqlite:///opt/vault/data/vault.db"
+vault_db_url: "sqlite+aiosqlite:////opt/vault/data/vault.db"
 
 # CORS
 vault_cors_origins: "https://vault-cube.local"
