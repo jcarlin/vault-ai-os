@@ -20,6 +20,7 @@
     - "{{ vault_backend_tls_dir }}"
     - "{{ vault_backend_models_dir }}"
     - "{{ vault_backend_quarantine_dir }}"
+    - "{{ vault_backend_datasets_dir }}"
     - "{{ vault_backend_log_dir }}"
   tags:
     - backend

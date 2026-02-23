@@ -10,6 +10,7 @@ vault_backend_config_dir: /opt/vault/config
 vault_backend_tls_dir: /opt/vault/tls
 vault_backend_models_dir: /opt/vault/models
 vault_backend_quarantine_dir: /opt/vault/quarantine
+vault_backend_datasets_dir: /opt/vault/data/datasets
 vault_backend_log_dir: /var/log/vault
 
 # Service configuration
