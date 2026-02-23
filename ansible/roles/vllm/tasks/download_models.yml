@@ -11,6 +11,7 @@
     name: huggingface-hub
     state: present
     executable: pip3.12
+    extra_args: "--break-system-packages"
   tags:
     - vllm
     - vllm-models
