@@ -21,7 +21,7 @@ vault_backend_log_level: info
 vault_vllm_base_url: "http://localhost:8001"
 
 # Database
-vault_db_url: "sqlite+aiosqlite:////opt/vault/data/vault.db"
+vault_db_url: "postgresql+asyncpg://vault:{{ vault_pg_password | default('vault') }}@localhost:5432/vault"
 
 # CORS
 vault_cors_origins: "https://vault-cube.local"
@@ -54,5 +54,5 @@ vault_backend_system_deps:
   - libtiff-dev
   - libwebp-dev
   - zlib1g-dev
-  - sqlite3
-  - gnupg            # python-gnupg runtime dep (GPG signature verification)
+  - postgresql-client  # pg_dump/pg_restore for backup/restore
+  - gnupg              # python-gnupg runtime dep (GPG signature verification)

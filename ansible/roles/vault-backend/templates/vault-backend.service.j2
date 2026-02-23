@@ -3,7 +3,8 @@
 
 [Unit]
 Description=Vault AI Backend (FastAPI)
-After=network.target docker.service
+After=network.target docker.service vault-postgresql.service
+Requires=vault-postgresql.service
 
 [Service]
 Type=exec

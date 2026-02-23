@@ -1,0 +1,46 @@
+---
+# PostgreSQL Role — Docker container with pgvector, managed by systemd
+
+- name: Pull PostgreSQL + pgvector Docker image
+  ansible.builtin.command:
+    cmd: docker pull {{ vault_pg_image }}
+  register: pg_pull
+  changed_when: "'Downloaded newer image' in pg_pull.stdout or 'Pull complete' in pg_pull.stdout"
+
+- name: Create Docker volume for PostgreSQL data
+  ansible.builtin.command:
+    cmd: docker volume create {{ vault_pg_volume }}
+  register: pg_vol
+  changed_when: pg_vol.rc == 0
+
+- name: Deploy vault-postgresql systemd service
+  ansible.builtin.template:
+    src: vault-postgresql.service.j2
+    dest: /etc/systemd/system/vault-postgresql.service
+    mode: "0644"
+  notify: Restart vault-postgresql
+
+- name: Enable and start vault-postgresql
+  ansible.builtin.systemd:
+    name: vault-postgresql
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for PostgreSQL to become healthy
+  ansible.builtin.command:
+    cmd: docker exec {{ vault_pg_container }} pg_isready -U {{ vault_pg_user }}
+  register: pg_ready
+  retries: "{{ vault_pg_healthcheck_retries }}"
+  delay: "{{ vault_pg_healthcheck_interval }}"
+  until: pg_ready.rc == 0
+  changed_when: false
+
+- name: Enable pgvector extension
+  ansible.builtin.command:
+    cmd: >-
+      docker exec {{ vault_pg_container }}
+      psql -U {{ vault_pg_user }} -d {{ vault_pg_database }}
+      -c "CREATE EXTENSION IF NOT EXISTS vector;"
+  register: pgvector_result
+  changed_when: "'CREATE EXTENSION' in pgvector_result.stdout"

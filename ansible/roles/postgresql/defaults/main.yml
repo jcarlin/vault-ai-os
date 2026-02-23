@@ -1,0 +1,25 @@
+---
+# PostgreSQL Role - Default Variables
+# Deploys PostgreSQL 16 + pgvector via Docker container managed by systemd
+
+# PostgreSQL version (Docker image tag)
+vault_pg_version: "pg16"
+
+# Connection settings
+vault_pg_port: 5432
+vault_pg_user: vault
+vault_pg_password: vault
+vault_pg_database: vault
+
+# Docker image (pgvector/pgvector includes vector extension)
+vault_pg_image: "pgvector/pgvector:{{ vault_pg_version }}"
+
+# Data volume name (Docker named volume)
+vault_pg_volume: vault-pgdata
+
+# Container name
+vault_pg_container: vault-postgresql
+
+# Healthcheck settings
+vault_pg_healthcheck_interval: 5
+vault_pg_healthcheck_retries: 10

@@ -54,6 +54,9 @@
       tags: ['always']
 
   roles:
+    - role: postgresql
+      tags: ['postgresql', 'database']
+
     - role: vault-backend
       tags: ['backend']
 
@@ -73,6 +76,7 @@
           - "============================================"
           - ""
           - "Services:"
+          - "  vault-postgresql → PostgreSQL 16 + pgvector on :5432 (Docker)"
           - "  vault-backend   → FastAPI on :{{ vault_backend_port | default(8000) }}"
           - "  vault-frontend  → Next.js on :{{ vault_frontend_port | default(3001) }}"
           - "  caddy           → HTTPS on :443 (self-signed TLS)"
@@ -83,6 +87,7 @@
           - "  http://localhost:3001        # Frontend direct"
           - ""
           - "Service management:"
+          - "  systemctl status vault-postgresql"
           - "  systemctl status vault-backend"
           - "  systemctl status vault-frontend"
           - "  systemctl status caddy"

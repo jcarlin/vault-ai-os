@@ -1,0 +1,24 @@
+# Vault AI PostgreSQL (Docker)
+# Managed by Ansible — do not edit manually
+
+[Unit]
+Description=Vault AI PostgreSQL (Docker)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=exec
+ExecStartPre=-/usr/bin/docker rm -f {{ vault_pg_container }}
+ExecStart=/usr/bin/docker run --rm --name {{ vault_pg_container }} \
+    -p 127.0.0.1:{{ vault_pg_port }}:5432 \
+    -v {{ vault_pg_volume }}:/var/lib/postgresql/data \
+    -e POSTGRES_USER={{ vault_pg_user }} \
+    -e POSTGRES_PASSWORD={{ vault_pg_password }} \
+    -e POSTGRES_DB={{ vault_pg_database }} \
+    {{ vault_pg_image }}
+ExecStop=/usr/bin/docker stop {{ vault_pg_container }}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

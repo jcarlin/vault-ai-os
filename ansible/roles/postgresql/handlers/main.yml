@@ -1,0 +1,6 @@
+---
+- name: Restart vault-postgresql
+  ansible.builtin.systemd:
+    name: vault-postgresql
+    state: restarted
+    daemon_reload: true
