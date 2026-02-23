@@ -38,4 +38,5 @@
     - gpu-monitoring.json
     - inference-performance.json
     - system-overview.json
+    - uptime-availability.json
   notify: Restart grafana
