@@ -16,6 +16,14 @@
     - vllm
     - vllm-models
 
+- name: Locate hf CLI binary
+  ansible.builtin.command: which hf
+  register: hf_cli_path
+  changed_when: false
+  tags:
+    - vllm
+    - vllm-models
+
 - name: Create models directory
   ansible.builtin.file:
     path: "{{ vault_models_dir }}"
@@ -29,11 +37,10 @@
 
 - name: Download pre-loaded models
   ansible.builtin.command: >
-    huggingface-cli download
+    {{ hf_cli_path.stdout }} download
     {{ item.hf_repo }}
     --local-dir {{ vault_models_dir }}/{{ item.local_dir }}
     {% if item.revision is defined and item.revision %}--revision {{ item.revision }}{% endif %}
-    --local-dir-use-symlinks False
   args:
     creates: "{{ vault_models_dir }}/{{ item.local_dir }}/config.json"
   loop: "{{ vllm_preloaded_models }}"
