@@ -7,11 +7,17 @@
   register: pg_pull
   changed_when: "'Downloaded newer image' in pg_pull.stdout or 'Pull complete' in pg_pull.stdout"
 
+- name: Check if PostgreSQL Docker volume exists
+  ansible.builtin.command:
+    cmd: docker volume inspect {{ vault_pg_volume }}
+  register: pg_vol_check
+  failed_when: false
+  changed_when: false
+
 - name: Create Docker volume for PostgreSQL data
   ansible.builtin.command:
     cmd: docker volume create {{ vault_pg_volume }}
-  register: pg_vol
-  changed_when: pg_vol.rc == 0
+  when: pg_vol_check.rc != 0
 
 - name: Deploy vault-postgresql systemd service
   ansible.builtin.template:
@@ -43,4 +49,4 @@
       psql -U {{ vault_pg_user }} -d {{ vault_pg_database }}
       -c "CREATE EXTENSION IF NOT EXISTS vector;"
   register: pgvector_result
-  changed_when: "'CREATE EXTENSION' in pgvector_result.stdout"
+  changed_when: "'already exists' not in pgvector_result.stderr"
