@@ -55,3 +55,4 @@ vault_backend_system_deps:
   - libwebp-dev
   - zlib1g-dev
   - sqlite3
+  - gnupg            # python-gnupg runtime dep (GPG signature verification)
