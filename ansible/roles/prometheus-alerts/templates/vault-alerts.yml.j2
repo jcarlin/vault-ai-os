@@ -81,3 +81,12 @@ groups:
         annotations:
           summary: "DCGM GPU exporter is down"
           description: "GPU metrics exporter has been unreachable for more than {{ alert_dcgm_down_for }}"
+
+      - alert: ServiceDown
+        expr: vault_service_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Vault service {{ '{{' }} $labels.service {{ '}}' }} is down"
+          description: "Service {{ '{{' }} $labels.service {{ '}}' }} has been down for more than 2 minutes"
