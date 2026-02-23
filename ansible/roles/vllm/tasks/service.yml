@@ -1,0 +1,64 @@
+---
+# Vault vLLM Service — systemd unit for production inference
+# Runs vLLM NGC container as a managed Docker service
+
+- name: Deploy vault-vllm systemd service
+  ansible.builtin.template:
+    src: vault-vllm.service.j2
+    dest: /etc/systemd/system/vault-vllm.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart vault-vllm
+  tags:
+    - vllm
+    - vllm-service
+
+- name: Enable vault-vllm service
+  ansible.builtin.systemd:
+    name: vault-vllm
+    enabled: yes
+    daemon_reload: yes
+  tags:
+    - vllm
+    - vllm-service
+
+- name: Start vault-vllm service
+  ansible.builtin.systemd:
+    name: vault-vllm
+    state: started
+  when: not (packer_build | default(false))
+  tags:
+    - vllm
+    - vllm-service
+
+- name: Wait for vLLM to become ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ vllm_host_port }}/v1/models"
+    method: GET
+    status_code: 200
+    timeout: 10
+  register: vllm_health
+  retries: 30
+  delay: 10
+  until: vllm_health.status == 200
+  when: not (packer_build | default(false))
+  ignore_errors: yes
+  tags:
+    - vllm
+    - vllm-service
+
+- name: Display vLLM service status
+  ansible.builtin.debug:
+    msg: >-
+      vault-vllm service deployed.
+      {% if packer_build | default(false) %}
+      Service will start on first boot.
+      {% elif vllm_health is defined and vllm_health.status == 200 %}
+      vLLM is ready and serving on port {{ vllm_host_port }}.
+      {% else %}
+      vLLM is starting up (model loading may take several minutes).
+      {% endif %}
+  tags:
+    - vllm
+    - vllm-service

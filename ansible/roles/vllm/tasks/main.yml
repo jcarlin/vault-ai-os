@@ -1,9 +1,13 @@
 ---
 # ansible/roles/vllm/tasks/main.yml
-# Install vLLM — NGC container for Blackwell, pip for older GPUs
+# Install vLLM, download models, and configure systemd service
 #
 # IMPORTANT: Precompiled pip wheels do NOT work on RTX 5090 (Blackwell).
 # The wheels lack sm_120 kernel binaries, causing silent runtime failures.
+
+# ============================================================================
+# INSTALL vLLM
+# ============================================================================
 
 # NGC Container method (recommended for Blackwell)
 - name: Install vLLM via NGC container
@@ -39,7 +43,8 @@
           shift
           docker run --rm --gpus all \
             -e VLLM_FLASH_ATTN_VERSION={{ vllm_flash_attn_version }} \
-            -p {{ vllm_default_port }}:8000 \
+            -p {{ vllm_host_port }}:8000 \
+            -v {{ vault_models_dir }}:/models \
             -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
             {{ vllm_ngc_image }} \
             --model "$MODEL" "$@"
@@ -54,6 +59,7 @@
           docker run --rm -it --gpus all \
             -e VLLM_FLASH_ATTN_VERSION={{ vllm_flash_attn_version }} \
             -v "$HOME:/workspace" \
+            -v {{ vault_models_dir }}:/models \
             -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
             -w /workspace \
             {{ vllm_ngc_image }} \
@@ -84,3 +90,51 @@
       debug:
         msg: "{{ vllm_check.stdout }}"
   when: vllm_install_method == "pip"
+
+# ============================================================================
+# DOWNLOAD MODELS (during image build)
+# ============================================================================
+
+- name: Download pre-loaded models
+  ansible.builtin.include_tasks: download_models.yml
+  when: vllm_download_models | default(true)
+  tags:
+    - vllm
+    - vllm-models
+
+# ============================================================================
+# DEPLOY PRODUCTION CONFIGS
+# ============================================================================
+
+- name: Deploy production models.json manifest
+  ansible.builtin.template:
+    src: models.json.j2
+    dest: /opt/vault/config/models.json
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0644'
+  tags:
+    - vllm
+    - vllm-config
+
+- name: Deploy production gpu-config.yaml
+  ansible.builtin.template:
+    src: gpu-config.yaml.j2
+    dest: /opt/vault/config/gpu-config.yaml
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0644'
+  tags:
+    - vllm
+    - vllm-config
+
+# ============================================================================
+# SYSTEMD SERVICE (production inference)
+# ============================================================================
+
+- name: Configure vault-vllm systemd service
+  ansible.builtin.include_tasks: service.yml
+  when: vllm_install_method == "ngc_container"
+  tags:
+    - vllm
+    - vllm-service

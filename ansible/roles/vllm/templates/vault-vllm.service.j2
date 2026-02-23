@@ -1,0 +1,38 @@
+# Vault AI vLLM Inference Server (Docker)
+# Managed by Ansible — do not edit manually
+
+[Unit]
+Description=Vault AI vLLM Inference Server
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+TimeoutStartSec=300
+
+# Clean up any leftover container before starting
+ExecStartPre=-/usr/bin/docker stop {{ vault_vllm_container_name }}
+ExecStartPre=-/usr/bin/docker rm {{ vault_vllm_container_name }}
+
+ExecStart=/usr/bin/docker run \
+    --name {{ vault_vllm_container_name }} \
+    --gpus '"device={{ vllm_gpu_devices }}"' \
+    -e VLLM_FLASH_ATTN_VERSION={{ vllm_flash_attn_version }} \
+    -v {{ vault_models_dir }}:/models \
+    -p {{ vllm_host_port }}:8000 \
+    {{ vllm_ngc_image }} \
+    --model /models/{{ vllm_default_model_path }} \
+    --served-model-name {{ vllm_served_model_name }} \
+    --gpu-memory-utilization {{ vllm_gpu_memory_utilization }} \
+    --max-model-len {{ vllm_max_model_len }} \
+    --dtype auto \
+    --trust-remote-code
+
+ExecStop=/usr/bin/docker stop -t 30 {{ vault_vllm_container_name }}
+ExecStopPost=-/usr/bin/docker rm {{ vault_vllm_container_name }}
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

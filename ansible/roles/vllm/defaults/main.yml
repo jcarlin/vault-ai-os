@@ -6,7 +6,7 @@
 #   - Must use NGC container or build from source
 #   - Flash Attention 3 does NOT work on Blackwell — must force FA2
 #   - vLLM tensor parallelism (TP=2) is BROKEN on dual RTX 5090 as of Feb 2026
-#   - For multi-GPU inference, use Ollama (layer splitting) or DeepSpeed instead
+#   - For multi-GPU inference, use replica mode (1 model copy per GPU)
 
 # Installation Method
 # Options: ngc_container (recommended for Blackwell), pip (for non-Blackwell)
@@ -15,7 +15,7 @@ vllm_install_method: "ngc_container"
 
 # NGC Container — recommended for RTX 5090
 vllm_ngc_image: "nvcr.io/nvidia/vllm:26.01-py3"
-vllm_ngc_container_name: "vllm-server"
+vllm_ngc_container_name: "vault-vllm"
 
 # vLLM environment variables (required for Blackwell)
 # Flash Attention 3 is broken on Blackwell; force v2
@@ -23,10 +23,70 @@ vllm_flash_attn_version: "2"
 # CUDA architecture for custom extension compilation
 vllm_cuda_arch_list: "12.0"
 
-# vLLM server defaults (for NGC container)
-vllm_default_port: 8000
-vllm_default_model: ""  # Set to a model name to auto-start serving
-
 # Source build settings (alternative to NGC container)
 vllm_source_repo: "https://github.com/vllm-project/vllm.git"
 vllm_source_branch: "main"
+
+# =============================================================================
+# SERVICE CONFIGURATION (vault-vllm.service)
+# =============================================================================
+
+# Container name — must match backend's VAULT_VLLM_CONTAINER_NAME
+vault_vllm_container_name: "vault-vllm"
+
+# Port mapping: host_port → container 8000
+# Backend expects vLLM on port 8001 (VLLM_BASE_URL=http://localhost:8001)
+vllm_host_port: 8001
+
+# GPU devices visible to the container ("0" for single GPU, "0,1" for dual)
+vllm_gpu_devices: "0"
+
+# GPU memory utilization (0.0–1.0)
+vllm_gpu_memory_utilization: 0.9
+
+# Maximum model context length (tokens)
+vllm_max_model_len: 32768
+
+# GPU strategy for gpu-config.yaml
+vllm_gpu_strategy: "replica"
+vllm_gpu_list: "[0]"
+
+# =============================================================================
+# MODEL CONFIGURATION
+# =============================================================================
+
+# Models directory on the host (mounted into container as /models)
+vault_models_dir: /opt/vault/models
+
+# Default model to serve (path relative to vault_models_dir)
+vllm_default_model_path: "qwen2.5-32b-awq"
+vllm_served_model_name: "qwen2.5-32b-awq"
+
+# Whether to download models during build (set false for dev/testing)
+vllm_download_models: true
+
+# Pre-loaded models — downloaded during Packer image build
+# Each entry needs: id, hf_repo, local_dir, revision (optional), and manifest fields
+vllm_preloaded_models:
+  - id: "qwen2.5-32b-awq"
+    hf_repo: "Qwen/Qwen2.5-32B-Instruct-AWQ"
+    local_dir: "qwen2.5-32b-awq"
+    revision: ""  # Pin to specific commit hash for reproducible builds
+    name: "Qwen 2.5 32B (AWQ Quantized)"
+    parameters: "32B"
+    quantization: "AWQ 4-bit"
+    context_window: 32768
+    vram_required_gb: 20
+    description: "Best balance of capability and speed. Recommended for most use cases."
+    type: "chat"
+  - id: "llama-3.3-8b-q4"
+    hf_repo: "TechxGenus/Llama-3.3-8B-Instruct-AWQ"
+    local_dir: "llama-3.3-8b-q4"
+    revision: ""  # Pin to specific commit hash for reproducible builds
+    name: "Llama 3.3 8B (4-bit)"
+    parameters: "8B"
+    quantization: "AWQ 4-bit"
+    context_window: 131072
+    vram_required_gb: 6
+    description: "Fast model for simple tasks. Lower capability but 4x faster."
+    type: "chat"

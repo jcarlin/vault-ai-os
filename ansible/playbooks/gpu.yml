@@ -118,6 +118,26 @@
       failed_when: false
       tags: ['always']
 
+    - name: Copy vLLM inference test script
+      copy:
+        src: "{{ playbook_dir }}/../../scripts/test-vllm-inference.py"
+        dest: "/home/{{ vault_user }}/scripts/test-vllm-inference.py"
+        owner: "{{ vault_user }}"
+        group: "{{ vault_user }}"
+        mode: '0755'
+      failed_when: false
+      tags: ['always']
+
+    - name: Copy vLLM API test script
+      copy:
+        src: "{{ playbook_dir }}/../../scripts/test-vllm-api.sh"
+        dest: "/home/{{ vault_user }}/scripts/test-vllm-api.sh"
+        owner: "{{ vault_user }}"
+        group: "{{ vault_user }}"
+        mode: '0755'
+      failed_when: false
+      tags: ['always']
+
     - name: Display next steps
       debug:
         msg:
@@ -129,17 +149,18 @@
           - "If the system rebooted (NVIDIA driver install), re-run this"
           - "playbook to continue from where it left off — roles are idempotent."
           - ""
+          - "vLLM service:"
+          - "  systemctl status vault-vllm                   # Service status"
+          - "  journalctl -u vault-vllm -f                   # Live logs"
+          - "  curl http://localhost:8001/v1/models           # List loaded models"
+          - ""
           - "Validation commands:"
           - "  nvidia-smi                                    # GPU status"
-          - "  bash ~/scripts/validate-gpus.sh               # Full validation"
+          - "  bash ~/scripts/validate-gpus.sh               # Full GPU validation"
+          - "  python3.12 ~/scripts/test-vllm-inference.py --model /opt/vault/models/qwen2.5-32b-awq  # Direct inference test"
+          - "  bash ~/scripts/test-vllm-api.sh               # API gateway test"
+          - "  bash ~/scripts/test-vllm-api.sh --direct      # Direct vLLM test"
           - "  python3.12 ~/scripts/test-pytorch-ddp.py      # Multi-GPU PyTorch"
-          - ""
-          - "Start vLLM inference:"
-          - "  python3.12 -m vllm.entrypoints.openai.api_server \\"
-          - "    --model Qwen/Qwen2.5-32B-Instruct-AWQ \\"
-          - "    --tensor-parallel-size 1 \\"
-          - "    --gpu-memory-utilization 0.9 \\"
-          - "    --port 8001"
           - ""
           - "Monitoring:"
           - "  https://{{ ansible_hostname }}:9090   # Cockpit (system admin)"

@@ -1,0 +1,65 @@
+---
+# Download pre-loaded models from Hugging Face during image build
+# Internet is available during Packer build, not at customer site
+#
+# Licensing:
+#   - Qwen 2.5: Apache 2.0 (safe for commercial redistribution)
+#   - Llama 3.3: Meta Community License (verify commercial terms before shipping)
+
+- name: Install huggingface-hub CLI
+  ansible.builtin.pip:
+    name: huggingface-hub
+    state: present
+    executable: pip3.12
+  tags:
+    - vllm
+    - vllm-models
+
+- name: Create models directory
+  ansible.builtin.file:
+    path: "{{ vault_models_dir }}"
+    state: directory
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    mode: '0755'
+  tags:
+    - vllm
+    - vllm-models
+
+- name: Download pre-loaded models
+  ansible.builtin.command: >
+    huggingface-cli download
+    {{ item.hf_repo }}
+    --local-dir {{ vault_models_dir }}/{{ item.local_dir }}
+    {% if item.revision is defined and item.revision %}--revision {{ item.revision }}{% endif %}
+    --local-dir-use-symlinks False
+  args:
+    creates: "{{ vault_models_dir }}/{{ item.local_dir }}/config.json"
+  loop: "{{ vllm_preloaded_models }}"
+  loop_control:
+    label: "{{ item.id }} ({{ item.hf_repo }})"
+  become: true
+  become_user: "{{ vault_user }}"
+  when: vllm_download_models | default(true)
+  tags:
+    - vllm
+    - vllm-models
+
+- name: Set ownership on downloaded models
+  ansible.builtin.file:
+    path: "{{ vault_models_dir }}"
+    owner: "{{ vault_user }}"
+    group: "{{ vault_user }}"
+    recurse: yes
+  tags:
+    - vllm
+    - vllm-models
+
+- name: Display download summary
+  ansible.builtin.debug:
+    msg:
+      - "Models downloaded to {{ vault_models_dir }}:"
+      - "{% for model in vllm_preloaded_models %}  - {{ model.id }}: {{ vault_models_dir }}/{{ model.local_dir }}{% endfor %}"
+  tags:
+    - vllm
+    - vllm-models

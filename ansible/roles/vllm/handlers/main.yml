@@ -1,0 +1,7 @@
+---
+- name: Restart vault-vllm
+  ansible.builtin.systemd:
+    name: vault-vllm
+    state: restarted
+    daemon_reload: yes
+  when: not (packer_build | default(false))

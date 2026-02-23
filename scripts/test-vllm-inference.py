@@ -2,54 +2,99 @@
 """
 scripts/test-vllm-inference.py
 Test vLLM inference performance
+
+Usage:
+    python3.12 test-vllm-inference.py                           # Default: facebook/opt-125m
+    python3.12 test-vllm-inference.py --model /models/qwen2.5-32b-awq
+    python3.12 test-vllm-inference.py --model /models/llama-3.3-8b-q4 --max-tokens 100
 """
 
+import argparse
 import time
 from vllm import LLM, SamplingParams
+
 
 def main():
     """Main test function"""
 
-    print("\n=== vLLM Inference Test ===\n")
+    parser = argparse.ArgumentParser(description="Test vLLM inference performance")
+    parser.add_argument(
+        "--model", "-m",
+        default="facebook/opt-125m",
+        help="Model name or path (default: facebook/opt-125m)"
+    )
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=50,
+        help="Max tokens to generate per prompt (default: 50)"
+    )
+    parser.add_argument(
+        "--num-prompts",
+        type=int,
+        default=30,
+        help="Number of prompts to run (default: 30)"
+    )
+    parser.add_argument(
+        "--gpu-memory",
+        type=float,
+        default=0.9,
+        help="GPU memory utilization 0.0-1.0 (default: 0.9)"
+    )
+    parser.add_argument(
+        "--tensor-parallel", "-tp",
+        type=int,
+        default=1,
+        help="Tensor parallel size (default: 1)"
+    )
+    args = parser.parse_args()
 
-    # Initialize vLLM with a small test model
-    print("Loading model (facebook/opt-125m)...")
-    print("Note: First run will download the model (~250MB)")
+    print(f"\n=== vLLM Inference Test ===\n")
+
+    # Initialize vLLM
+    print(f"Loading model ({args.model})...")
+    if args.model == "facebook/opt-125m":
+        print("Note: First run will download the model (~250MB)")
 
     try:
         llm = LLM(
-            model="facebook/opt-125m",  # Small model for testing
-            tensor_parallel_size=1,      # Single GPU
-            gpu_memory_utilization=0.5,  # Conservative memory usage
-            download_dir="/tmp/vllm_cache"
+            model=args.model,
+            tensor_parallel_size=args.tensor_parallel,
+            gpu_memory_utilization=args.gpu_memory,
+            download_dir="/tmp/vllm_cache",
+            trust_remote_code=True,
         )
-        print("✓ Model loaded successfully\n")
+        print("Model loaded successfully\n")
     except Exception as e:
         print(f"ERROR: Failed to load model: {e}")
         return 1
 
     # Test prompts
-    prompts = [
+    base_prompts = [
         "Once upon a time",
         "The meaning of life is",
         "Artificial intelligence will",
         "In the future, technology",
         "Machine learning is",
-    ] * 6  # 30 prompts total
+    ]
+    # Repeat to reach desired count
+    repeats = max(1, args.num_prompts // len(base_prompts))
+    prompts = (base_prompts * repeats)[:args.num_prompts]
 
     # Sampling parameters
     sampling_params = SamplingParams(
         temperature=0.8,
         top_p=0.95,
-        max_tokens=50
+        max_tokens=args.max_tokens,
     )
 
     print(f"=== Inference Configuration ===")
-    print(f"Model: facebook/opt-125m")
+    print(f"Model: {args.model}")
     print(f"Prompts: {len(prompts)}")
-    print(f"Max tokens per prompt: 50")
+    print(f"Max tokens per prompt: {args.max_tokens}")
     print(f"Temperature: 0.8")
-    print(f"Top-p: 0.95\n")
+    print(f"Top-p: 0.95")
+    print(f"Tensor parallel: {args.tensor_parallel}\n")
 
     # Run inference
     print("Running inference...")
@@ -86,37 +131,39 @@ def main():
     print(f"\n=== Validation ===")
     success = True
 
-    if throughput > 5:  # Minimum 5 tokens/sec for small model
-        print(f"✓ Throughput acceptable ({throughput:.2f} tokens/sec)")
+    if throughput > 5:  # Minimum 5 tokens/sec
+        print(f"  Throughput acceptable ({throughput:.2f} tokens/sec)")
     else:
-        print(f"✗ Throughput too low ({throughput:.2f} tokens/sec)")
+        print(f"  Throughput too low ({throughput:.2f} tokens/sec)")
         success = False
 
-    if total_tokens > 500:  # Should generate reasonable amount
-        print(f"✓ Generated sufficient tokens ({total_tokens})")
+    if total_tokens > 0:
+        print(f"  Generated tokens ({total_tokens})")
     else:
-        print(f"⚠ Low token count ({total_tokens})")
+        print(f"  No tokens generated")
+        success = False
 
-    if elapsed < 60:  # Should complete in reasonable time
-        print(f"✓ Inference completed in reasonable time")
+    if elapsed < 300:  # Should complete in reasonable time
+        print(f"  Inference completed in reasonable time ({elapsed:.1f}s)")
     else:
-        print(f"✗ Inference took too long")
+        print(f"  Inference took too long ({elapsed:.1f}s)")
         success = False
 
     # Check output quality (basic check)
     sample_output = outputs[0].outputs[0].text
     if len(sample_output.strip()) > 0:
-        print(f"✓ Generated text is non-empty")
+        print(f"  Generated text is non-empty")
     else:
-        print(f"✗ Generated empty text")
+        print(f"  Generated empty text")
         success = False
 
     if success:
-        print(f"\n✓ All tests passed!")
+        print(f"\nAll tests passed!")
         return 0
     else:
-        print(f"\n✗ Some tests failed")
+        print(f"\nSome tests failed")
         return 1
+
 
 if __name__ == "__main__":
     try:

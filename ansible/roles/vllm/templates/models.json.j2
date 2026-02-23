@@ -1,0 +1,18 @@
+{
+  "models": [
+{% for model in vllm_preloaded_models %}
+    {
+      "id": "{{ model.id }}",
+      "name": "{{ model.name }}",
+      "parameters": "{{ model.parameters }}",
+      "quantization": "{{ model.quantization }}",
+      "context_window": {{ model.context_window }},
+      "vram_required_gb": {{ model.vram_required_gb }},
+      "description": "{{ model.description }}",
+      "path": "{{ vault_models_dir }}/{{ model.local_dir }}",
+      "type": "{{ model.type | default('chat') }}"
+    }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+  ]
+}

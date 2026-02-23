@@ -1,0 +1,15 @@
+# Vault AI GPU Configuration
+# Managed by Ansible — do not edit manually
+#
+# Strategy: replica = each GPU runs an independent model copy
+# For tensor parallel (TP=2+), change strategy and set gpus accordingly
+# NOTE: TP=2 is known broken on dual RTX 5090 as of Feb 2026
+
+strategy: {{ vllm_gpu_strategy }}
+
+models:
+  - id: {{ vllm_served_model_name }}
+    gpus: {{ vllm_gpu_list }}
+    mode: {{ vllm_gpu_strategy }}
+    # To add a second GPU in replica mode, update gpus to [0, 1]
+    # and restart vault-vllm service
