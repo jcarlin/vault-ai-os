@@ -79,14 +79,14 @@ vllm_preloaded_models:
     vram_required_gb: 20
     description: "Best balance of capability and speed. Recommended for most use cases."
     type: "chat"
-  - id: "llama-3.3-8b-q4"
-    hf_repo: "TechxGenus/Llama-3.3-8B-Instruct-AWQ"
-    local_dir: "llama-3.3-8b-q4"
+  - id: "qwen2.5-7b-awq"
+    hf_repo: "Qwen/Qwen2.5-7B-Instruct-AWQ"
+    local_dir: "qwen2.5-7b-awq"
     revision: ""  # Pin to specific commit hash for reproducible builds
-    name: "Llama 3.3 8B (4-bit)"
-    parameters: "8B"
+    name: "Qwen 2.5 7B (AWQ Quantized)"
+    parameters: "7B"
     quantization: "AWQ 4-bit"
-    context_window: 131072
-    vram_required_gb: 6
+    context_window: 32768
+    vram_required_gb: 5
     description: "Fast model for simple tasks. Lower capability but 4x faster."
     type: "chat"
