@@ -11,6 +11,7 @@ After=network.target
 
 [Service]
 Type=oneshot
+ExecStartPre=/usr/bin/gpg --verify /opt/vault/updates/staged/bundle.sig /opt/vault/updates/staged/bundle.tar.gz
 ExecStart=/opt/vault/updates/vault-update-apply.sh
 TimeoutStartSec=600
 StandardOutput=journal
@@ -19,8 +20,12 @@ StandardError=journal
 # Run as root — needs to stop/start systemd services
 User=root
 
-# Security: only allow access to Vault paths
+# Security hardening — restrict what root can do
 NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/vault /var/log/vault /etc/systemd/system
+ProtectHome=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target

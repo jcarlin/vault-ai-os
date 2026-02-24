@@ -15,12 +15,19 @@
     groups: sudo
     append: yes
 
-- name: Configure passwordless sudo for vaultadmin
+- name: Configure scoped passwordless sudo for vaultadmin
   copy:
-    content: "{{ vault_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    content: |
+      # Vault AI — scoped sudo for service management and updates only.
+      # Full root requires the vaultadmin password (forced on first boot).
+      {{ vault_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl start vault-*, /usr/bin/systemctl stop vault-*, /usr/bin/systemctl restart vault-*, /usr/bin/systemctl status vault-*, /usr/bin/systemctl start caddy, /usr/bin/systemctl stop caddy, /usr/bin/systemctl restart caddy, /usr/bin/systemctl start vault-update-apply.service, /usr/bin/journalctl -u vault-*
     dest: "/etc/sudoers.d/{{ vault_user }}"
     mode: '0440'
     validate: 'visudo -cf %s'
+
+- name: Force password change on first login (expire default creds)
+  command: "chage -d 0 {{ vault_user }}"
+  changed_when: true
 
 - name: Set proper home directory permissions
   file:

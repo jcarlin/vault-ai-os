@@ -4,9 +4,11 @@
 
 grafana_port: 3000
 
-# Default admin credentials (changeable via first-boot wizard in future)
+# Default admin credentials — password is overridden by a random value
+# generated per-deployment in the grafana role tasks.
+# The generated password is written to /opt/vault/config/grafana-admin-password.txt.
 grafana_admin_user: admin
-grafana_admin_password: vault-admin
+grafana_admin_password: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=24') }}"
 
 # Grafana APT repository
 grafana_apt_key_url: "https://apt.grafana.com/gpg.key"

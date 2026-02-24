@@ -8,7 +8,8 @@ vault_pg_version: "pg16"
 # Connection settings
 vault_pg_port: 5432
 vault_pg_user: vault
-vault_pg_password: vault
+# Password is auto-generated per-deployment. Override in host_vars or vault for deterministic deploys.
+vault_pg_password: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=32') }}"
 vault_pg_database: vault
 
 # Docker image (pgvector/pgvector includes vector extension)
